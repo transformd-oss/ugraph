@@ -114,6 +114,42 @@ Depending on the definition style it can be:
 }
 ```
 
+## Node Property Accessor (on Edges)
+
+Object properties that reference Nodes may be doing so to reference a certain
+property of that Node type. If you want to access a specific property of the
+referenced Node you can specify a "$path" on the Node accessor for that property
+to access a specific value by JSON path.
+
+You can also target "computed" values of a targetted Node according to the Node
+type's implementation, example:
+
+1. `Webhook` Node type has `endpoint` property.
+1. `Link` Node `to` property accepts a string or `Webhook` Node Reference.
+1. Without "$path" meta-property the `Link` Node will infer "url" computed
+  value, where the implementation provides "url" is "http://my.site/{endpoint}".
+1. If desired, "$path" can be manually specified as "url".
+1. Or, to provide "$path" to another value of valid property value type.
+
+```jsonc
+[
+  {
+    "$id": "Foo:aonh637g3c",
+    "$type": "Foo",
+    "prop1": "hello",
+    "prop2": "world"
+  },
+  {
+    "$id": "Bar:xqlvpfo6pw",
+    "$type": "Bar",
+    // relies on Bar's implementation to pull a value from given Foo object.
+    "myStringProp": { "$node": "Foo:aonh637g3c" },
+    // uses json-path accessor to access value from path from Foo object.
+    "myStringProp": { "$node": "Foo:aonh637g3c", "$path": "$.prop1" }
+  }
+]
+```
+
 ## Types
 
 Supports a core set of data "types" Object definitions that can easily split out
@@ -121,7 +157,7 @@ into a Object node for reusable chunks of type definitions.
 
 Because this core data "types" are just different types of Nodes, they can are
 implementation dependent -- although it is nice to know how such concepts may
-be declaritively expressed for Nodes in an XGraph.
+be declaratively expressed for Nodes in an XGraph.
 
 ```jsonc
 // string

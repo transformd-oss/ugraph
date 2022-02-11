@@ -1,4 +1,4 @@
-# XGraph
+# xgraph
 
 Expressive JSON format for Graph-like data/object definitions.
 
@@ -19,7 +19,7 @@ Object definitions without an "$id" are considered anonymous.
 
 ```jsonc
 {
-  "$id": "Foo-qnxrs4muvb",
+  "$id": "Foo:qnxrs4muvb",
   "$type": "Foo",
 }
 ```
@@ -31,9 +31,9 @@ Other nodes may reference it using a "$node" reference accessor object.
 
 ```jsonc
 {
-  "$id": "Bar-sykvs6s4g4",
+  "$id": "Bar:sykvs6s4g4",
   "$type": "Bar",
-  "fooProp": { "$node": "Foo-qnxrs4muvb" }
+  "fooProp": { "$node": "Foo:qnxrs4muvb" }
 }
 ```
 
@@ -54,14 +54,14 @@ by "$id". Use an Object definition for "$node" instead of an "$id" string.
 ```jsonc
 [
   {
-    "$id": "Bar-sykvs6s4g4",
+    "$id": "Bar:sykvs6s4g4",
     "$type": "Bar",
-    "fooProp": { "$node": { "$id": "Foo-4npndimd8r", "$type": "Foo" } }
+    "fooProp": { "$node": { "$id": "Foo:4npndimd8r", "$type": "Foo" } }
   },
   {
-    "$id": "Bar-604x5kgh2v",
+    "$id": "Bar:604x5kgh2v",
     "$type": "Bar",
-    "fooProp": { "$node": "Foo-4npndimd8r" }
+    "fooProp": { "$node": "Foo:4npndimd8r" }
   }
 ]
 ```

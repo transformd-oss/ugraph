@@ -6,7 +6,7 @@ Expressive JSON format for Graph-like data/object definitions.
 
 Object definitions are defined as an object {} with a "$type" property:
 
-```json
+```jsonc
 {
   "$type": "Foo"
 }
@@ -17,7 +17,7 @@ Object definitions are defined as an object {} with a "$type" property:
 Object definitions can be made globally referencable by assigning an "$id".
 Object definitions without an "$id" are considered anonymous.
 
-```json
+```jsonc
 {
   "$id": "Foo-qnxrs4muvb",
   "$type": "Foo",
@@ -29,7 +29,7 @@ Object definitions without an "$id" are considered anonymous.
 Once given an "$id", the Object definition is considered a Node of a graph.
 Other nodes may reference it using a "$node" reference accessor object.
 
-```json
+```jsonc
 {
   "$id": "Bar-sykvs6s4g4",
   "$type": "Bar",
@@ -51,7 +51,7 @@ by "$id". Use an Object definition for "$node" instead of an "$id" string.
 > of all found Identified Objects (Nodes) using their contained "$id"
 > properties.
 
-```json
+```jsonc
 [
   {
     "$id": "Bar-sykvs6s4g4",
@@ -78,7 +78,7 @@ Depending on the definition style it can be:
 1. Anonymous Node definition with adjacent Edge props
 1. (Node) Reference with adjacent Edge props
 
-```json
+```jsonc
 {
   "$type": "Cat",
   "foods": [
@@ -123,7 +123,7 @@ Because this core data "types" are just different types of Nodes, they can are
 implementation dependent -- although it is nice to know how such concepts may
 be declaritively expressed for Nodes in an XGraph.
 
-```json
+```jsonc
 // string
 { "$type": "string" }
 // number
@@ -146,7 +146,7 @@ be declaritively expressed for Nodes in an XGraph.
 { "$type": "union", "of": [ { "$type": "string" }, { "$type": "number" } ] }
 ```
 
-```json
+```jsonc
 [
   {
     "$id": "object:Address:n4ky3lr0m0",
@@ -165,7 +165,7 @@ be declaritively expressed for Nodes in an XGraph.
 You can also alias primitives to make standard types more informative, instead
 of using primitives plainly.
 
-```json
+```jsonc
 [
   {
     "$id": "string:FieldTag:j50j1s1f6y",

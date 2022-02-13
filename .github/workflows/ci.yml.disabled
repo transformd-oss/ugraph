@@ -1,0 +1,137 @@
+name: main
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - CHANGELOG.md
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy? (y/N)"
+        required: false
+
+jobs:
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+          cache: "yarn"
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn lint
+
+      - run: yarn test:ts
+
+      - run: yarn test:unit
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+          cache: "yarn"
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn build
+      - uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist
+
+  test-acceptance:
+    name: Acceptance Tests
+    needs: [test-unit, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+          cache: "yarn"
+      - run: yarn install --frozen-lockfile
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist
+
+      - run: yarn test:acceptance
+
+  deploy:
+    name: Deploy
+    needs: test-acceptance
+    if: ${{ github.event.inputs.deploy == 'y' }}
+    concurrency:
+      group: publish
+      cancel-in-progress: true
+    env:
+      # workaround https://github.com/JS-DevTools/npm-publish/issues/15
+      INPUT_TOKEN: ""
+      # if "true" will publish on the "sha" tag
+      PUBLISH_SHA: "true"
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+          cache: "yarn"
+
+      - run: yarn install --frozen-lockfile
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist
+
+      - if: ${{ env.PUBLISH_SHA == '' }}
+        run: TAG= yarn build:version
+
+      - if: ${{ env.PUBLISH_SHA == 'true' }}
+        run: TAG= SHA= yarn build:version
+
+      - uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: ./dist/package.json
+          access: public
+          tag: ${{ env.PUBLISH_SHA == 'true' && 'sha' || 'latest' }}
+
+      - uses: ad-m/github-push-action@master
+        with:
+          tags: true
+
+  docs:
+    name: Documentation
+    needs: deploy
+    concurrency:
+      group: docs
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+          cache: "yarn"
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn docs
+
+      - uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs

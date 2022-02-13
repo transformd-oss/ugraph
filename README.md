@@ -1,4 +1,4 @@
-# xgraph
+# μGraph
 
 Expressive JSON format for Graph-like data/object definitions.
 
@@ -39,15 +39,15 @@ Other nodes may reference it using a "$node" reference accessor object.
 
 ## Nesting Nodes
 
-XGraph differentiates itself from basic JSON graph schemas by allowing for
-defining Nodes within other Nodes as part of a valid XGraph schema. This is
+uGraph differentiates itself from basic JSON graph schemas by allowing for
+defining Nodes within other Nodes as part of a valid uGraph schema. This is
 useful when writing a tree-like graph (DAG) at first, with the flexibility of
-referencing Nodes elsewhere in the `xgraph`.
+referencing Nodes elsewhere in the `ugraph`.
 
 Nodes may be nested within another Object/Node as still be globally referencable
 by "$id". Use an Object definition for "$node" instead of an "$id" string.
 
-> Walking this `xgraph` (as part of parsing/validation) will create a lookup map
+> Walking this `ugraph` (as part of parsing/validation) will create a lookup map
 > of all found Identified Objects (Nodes) using their contained "$id"
 > properties.
 
@@ -157,7 +157,7 @@ into a Object node for reusable chunks of type definitions.
 
 Because this core data "types" are just different types of Nodes, they can are
 implementation dependent -- although it is nice to know how such concepts may
-be declaratively expressed for Nodes in an XGraph.
+be declaratively expressed for Nodes in an uGraph.
 
 ```jsonc
 // string

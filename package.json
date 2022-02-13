@@ -11,14 +11,14 @@
   "scripts": {
     "prepare": "husky install",
     "dev": "yarn test && yarn test:ts && yarn lint",
-    "test": "jest",
-    "test:ts": "tsc --noEmit",
+    "test": "./scripts/test.sh",
+    "test:ts": "./scripts/test-ts.sh",
     "test:unit": "./scripts/test-unit.sh",
     "test:acceptance": "./scripts/test-acceptance.sh",
-    "lint": "eslint src",
+    "lint": "./scripts/lint.sh",
     "build": "./scripts/build.sh",
     "build:version": "./scripts/build-version.sh",
-    "docs": "typedoc ./src/index.ts --excludeInternal --disableSources",
+    "docs": "./scripts/docs.sh",
     "changelog": "./scripts/changelog.sh"
   },
   "devDependencies": {
@@ -31,16 +31,16 @@
     "@typescript-eslint/parser": "^5.9.0",
     "esbuild": "^0.14.0",
     "esbuild-jest": "^0.5.0",
-    "esbuild-node-tsc": "^1.8.2",
+    "esbuild-node-tsc": "^1.8.0",
     "eslint": "^8.6.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-jest": "^25.3.0",
     "eslint-plugin-prettier": "^4.0.0",
     "husky": "^7.0.0",
     "jest": "^27.4.0",
-    "nodemon": "^2.0.15",
+    "nodemon": "^2.0.0",
     "prettier": "^2.3.0",
-    "tsd": "^0.19.1",
+    "tsd": "^0.19.0",
     "typescript": "^4.5.0"
   },
   "keywords": [

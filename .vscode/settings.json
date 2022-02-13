@@ -1,4 +1,4 @@
 {
-  "jest.jestCommandLine": "yarn jest",
+  "jest.jestCommandLine": "yarn test",
   "typescript.tsdk": "node_modules/typescript/lib"
 }

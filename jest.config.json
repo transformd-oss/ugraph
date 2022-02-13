@@ -1,0 +1,13 @@
+{
+  "transform": {
+    "^.+\\.tsx?$": [
+      "esbuild-jest",
+      {
+        "format": "esm",
+        "sourcemap": true
+      }
+    ]
+  },
+  "extensionsToTreatAsEsm": [".ts"],
+  "modulePathIgnorePatterns": ["dist"]
+}

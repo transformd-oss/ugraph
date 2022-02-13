@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-jest
+cd $(dirname $0)/..
+
+./test.sh

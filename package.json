@@ -21,6 +21,10 @@
     "docs": "./scripts/docs.sh",
     "changelog": "./scripts/changelog.sh"
   },
+  "dependencies": {
+    "esresult": "^2.0.0",
+    "zod": "^3.11.0"
+  },
   "devDependencies": {
     "@commitlint/cli": "^16.0.0",
     "@commitlint/config-conventional": "^16.0.0",

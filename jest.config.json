@@ -9,5 +9,6 @@
     ]
   },
   "extensionsToTreatAsEsm": [".ts"],
+  "testPathIgnorePatterns": ["acceptance"],
   "modulePathIgnorePatterns": ["dist"]
 }

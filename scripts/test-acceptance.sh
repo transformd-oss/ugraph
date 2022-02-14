@@ -17,5 +17,7 @@ cp -r dist/* node_modules/ugraph
 mv package.json package.json.ignore
 mv dist/package.json dist/package.json.ignore
 
+cd $(dirname $0)/..
+
 # filter to only acceptance, remove ignore pattern set in config
-jest --testRegex=acceptance --testPathIgnorePatterns=
+./scripts/test.sh --testRegex=acceptance --testPathIgnorePatterns=

@@ -2,4 +2,4 @@
 
 cd $(dirname $0)/..
 
-./test.sh
+./scripts/test.sh

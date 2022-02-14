@@ -1,59 +1,4 @@
 import { Result, Ok } from "esresult";
-Ok;
-
-export type Node<
-  TYPE extends string | undefined = string,
-  PROPS extends Record<string, unknown> = Record<string, unknown>
-> = {
-  $id: string;
-  $type: TYPE;
-} & PROPS;
-
-function isNode($: unknown): $ is Node {
-  if (!$) return false;
-  if (!(typeof $ === "object")) return false;
-  const id = ($ as Node).$id;
-  if (!(typeof id === "string")) return false;
-  const type = ($ as Node).$type;
-  if (!(typeof type === "string" || typeof type === "undefined")) return false;
-  return true;
-}
-
-export interface Reference {
-  $node: string | Node;
-}
-
-function isReference($: unknown): $ is Reference {
-  if (!$) return false;
-  if (!(typeof $ === "object")) return false;
-  if (
-    !(
-      "$node" in $ &&
-      (typeof ($ as Reference).$node === "string" ||
-        isNode(($ as Reference).$node))
-    )
-  )
-    return false;
-  return true;
-}
-
-export interface Placeholder {
-  $placeholder: {
-    id: string;
-    // path: string[];
-  };
-}
-
-function isPlaceholder($: unknown): $ is Placeholder {
-  if (!$) return false;
-  if (!(typeof $ === "object")) return false;
-  if (!("$placeholder" in $)) return false;
-  return true;
-}
-
-export interface Graph extends Set<Record<string, unknown>> {
-  nodes: Map<string, Node>;
-}
 
 export function parse(
   data: Readonly<Array<Record<string, unknown>>>,
@@ -65,7 +10,20 @@ export function parse(
     nodes: new Map<string, Node>(),
   });
 
+  /////////////////////////////
+
   const placeholders = new Set<Placeholder>();
+
+  for (const obj of graph) {
+    if (isNode(obj)) {
+      const $obj = parseNode(obj);
+      if (!$obj.ok) return Result.err("BAD_NODE").cause($obj);
+    } else {
+      parseProps(obj);
+    }
+  }
+
+  /////////////////////////////
 
   function parseNode(
     node: Node
@@ -108,6 +66,8 @@ export function parse(
     return Result.ok(node);
   }
 
+  /////////////////////////////
+
   function parseProps(obj: Record<string, unknown>): Result<undefined> {
     for (const [key, value] of Object.entries(obj)) {
       if (key === "$id" || key === "$type") continue;
@@ -136,12 +96,7 @@ export function parse(
     return Result.ok(undefined);
   }
 
-  for (const obj of graph) {
-    if (isNode(obj)) {
-      const $obj = parseNode(obj);
-      if (!$obj.ok) return Result.err("BAD_NODE").cause($obj);
-    }
-  }
+  /////////////////////////////
 
   const errors: Result.Err<"BAD_REFERENCE", { id: string }>[] = [];
 
@@ -150,5 +105,70 @@ export function parse(
       errors.push(Result.err("BAD_REFERENCE").info(placeholder.$placeholder));
   });
 
+  /////////////////////////////
+
   return Result.ok(graph).warnings(errors);
+}
+
+/////////////////////////////
+/////////////////////////////
+
+export interface Graph extends Set<Record<string, unknown>> {
+  nodes: Map<string, Node>;
+}
+
+/////////////////////////////
+
+export type Node<
+  TYPE extends string | undefined = string,
+  PROPS extends Record<string, unknown> = Record<string, unknown>
+> = {
+  $id: string;
+  $type: TYPE;
+} & PROPS;
+
+function isNode($: unknown): $ is Node {
+  if (!$) return false;
+  if (!(typeof $ === "object")) return false;
+  const id = ($ as Node).$id;
+  if (!(typeof id === "string")) return false;
+  const type = ($ as Node).$type;
+  if (!(typeof type === "string" || typeof type === "undefined")) return false;
+  return true;
+}
+
+/////////////////////////////
+
+export interface Reference {
+  $node: string | Node;
+}
+
+function isReference($: unknown): $ is Reference {
+  if (!$) return false;
+  if (!(typeof $ === "object")) return false;
+  if (
+    !(
+      "$node" in $ &&
+      (typeof ($ as Reference).$node === "string" ||
+        isNode(($ as Reference).$node))
+    )
+  )
+    return false;
+  return true;
+}
+
+/////////////////////////////
+
+export interface Placeholder {
+  $placeholder: {
+    id: string;
+    // path: string[];
+  };
+}
+
+function isPlaceholder($: unknown): $ is Placeholder {
+  if (!$) return false;
+  if (!(typeof $ === "object")) return false;
+  if (!("$placeholder" in $)) return false;
+  return true;
 }

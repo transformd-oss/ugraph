@@ -69,7 +69,6 @@ test("with some nested nodes", () => {
   const $u = parse(graph);
   const u = $u.value;
   expect($u.ok).toBeTruthy();
-  expect($u.ok && $u.warnings()).toBeUndefined();
   expect(u?.size).toBe(1);
   expect(u?.nodes.size).toBe(3);
   expect(Array.from(u?.values() ?? [])).toEqual([
@@ -101,11 +100,41 @@ test("with many references to one node", () => {
   const $u = parse(graph);
   const u = $u.value;
   expect($u.ok).toBeTruthy();
-  expect($u.ok && $u.warnings()).toBeUndefined();
   expect(u?.size).toBe(3);
   expect(u?.nodes.size).toBe(3);
   const a = u?.nodes.get("a:1");
   expect(a).toBeDefined();
   expect(u?.nodes.get("b:2")?.["a"]).toStrictEqual(a);
   expect(u?.nodes.get("c:3")?.["a"]).toStrictEqual(a);
+});
+
+test("with references on a simple object", () => {
+  const graph = [
+    {
+      a: { $node: "a:1" },
+    },
+    {
+      $id: "a:1",
+      $type: "A",
+      foo: "bar",
+    },
+  ];
+  const $u = parse(graph);
+  expect($u.ok).toBeTruthy();
+  expect(Array.from($u.value?.values() ?? [])[0]).toMatchObject({
+    a: $u.value?.nodes.get("a:1"),
+  });
+});
+
+test("with bad references", () => {
+  const graph = [
+    {
+      a: { $node: "a:1" },
+      b: { $node: "b:2" },
+      c: { $node: "c:3" },
+    },
+  ];
+  const $u = parse(graph);
+  expect($u.ok).toBeTruthy();
+  expect($u.ok && $u.warnings()).toHaveLength(3);
 });

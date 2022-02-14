@@ -3,12 +3,10 @@
     "^.+\\.tsx?$": [
       "esbuild-jest",
       {
-        "format": "esm",
         "sourcemap": true
       }
     ]
   },
-  "extensionsToTreatAsEsm": [".ts"],
   "testPathIgnorePatterns": ["acceptance"],
   "modulePathIgnorePatterns": ["dist"]
 }

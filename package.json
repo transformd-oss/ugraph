@@ -6,7 +6,6 @@
   "repository": "github:ptboyer/ugraph",
   "author": "Peter Boyer <ugraph@peterboyer.me> (https://github.com/ptboyer)",
   "license": "MIT",
-  "type": "module",
   "main": "index.js",
   "scripts": {
     "prepare": "husky install",

@@ -9,10 +9,7 @@
       "disableOptimisticBPs": true,
       "cwd": "${workspaceFolder}",
       "runtimeExecutable": "yarn",
-      "args": ["jest", "--runInBand", "--watchAll=false"],
-      "env": {
-        "NODE_OPTIONS": "--experimental-vm-modules"
-      }
+      "args": ["jest", "--runInBand", "--watchAll=false"]
     }
   ]
 }

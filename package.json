@@ -1,6 +1,6 @@
 {
   "name": "ugraph",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Parser for uGraph JSON data.",
   "private": false,
   "repository": "github:ptboyer/ugraph",

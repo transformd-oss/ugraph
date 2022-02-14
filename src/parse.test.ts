@@ -1,4 +1,4 @@
-import { parse } from "./graph";
+import { parse } from "./parse";
 
 test("with only objects", () => {
   const graph = [{ a: "1" }, { b: "2" }, { c: "3" }];

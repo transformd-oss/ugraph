@@ -13,7 +13,7 @@ export function validate({
   types,
 }: {
   nodes: Map<string, Node>;
-  types: Map<string, TypedNode>;
+  types: Map<string, Node>;
 }): Result<
   Result.Ok<{ valid: true } | { valid: false; issues: Issue[] }>,
   | Result.Err<"TYPES", { errors: TypeErrors[] }>
@@ -27,6 +27,11 @@ export function validate({
   const typeErrors = new Set<TypeErrors>();
 
   for (const [id, type] of types) {
+    if (!isTypedNode(type)) {
+      typeErrors.add(Result.err("TYPE").$info({ id, type }));
+      continue;
+    }
+
     const $validator = toTypeValidator(type);
     if (!$validator.ok) {
       typeErrors.add(Result.err("TYPE").$cause($validator).$info({ id, type }));

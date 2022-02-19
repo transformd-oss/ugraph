@@ -1,4 +1,3 @@
-import { TypedNode, isTypedNode } from "./graph";
 import { resolve } from "./resolve";
 import { validate } from "./validate";
 
@@ -27,16 +26,8 @@ function getNodes(data: unknown) {
   return nodes;
 }
 
-function getTypedNodes(data: unknown) {
-  const nodes = getNodes(data);
-  for (const [, node] of nodes) {
-    if (!isTypedNode(node)) throw TypeError();
-  }
-  return nodes as Map<string, TypedNode>;
-}
-
 test("with no types", () => {
-  const types = getTypedNodes([]);
+  const types = getNodes([]);
   const $valid = validate({ nodes, types });
   expect($valid.ok).toBeTruthy();
   if (!$valid.ok) throw TypeError();
@@ -47,7 +38,7 @@ test("with no types", () => {
 });
 
 test("with all complete types", () => {
-  const types = getTypedNodes([
+  const types = getNodes([
     {
       $id: "A",
       $type: "object",
@@ -75,7 +66,7 @@ test("with all complete types", () => {
 });
 
 test("with missing types", () => {
-  const types = getTypedNodes([
+  const types = getNodes([
     {
       $id: "A",
       $type: "object",
@@ -97,7 +88,7 @@ test("with missing types", () => {
 });
 
 test("with incomplete types", () => {
-  const types = getTypedNodes([
+  const types = getNodes([
     {
       $id: "A",
       $type: "object",

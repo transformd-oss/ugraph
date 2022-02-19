@@ -1,4 +1,8 @@
-export interface Graph extends Set<Record<string, unknown>> {
+export type Obj = Record<string, unknown>;
+
+/////////////////////////////
+
+export interface Graph extends Set<Obj> {
   nodes: Map<string, Node>;
 }
 
@@ -39,21 +43,5 @@ export function isReference($: unknown): $ is Reference {
     )
   )
     return false;
-  return true;
-}
-
-/////////////////////////////
-
-export interface Placeholder {
-  $placeholder: {
-    id: string;
-    // path: string[];
-  };
-}
-
-export function isPlaceholder($: unknown): $ is Placeholder {
-  if (!$) return false;
-  if (!(typeof $ === "object")) return false;
-  if (!("$placeholder" in $)) return false;
   return true;
 }

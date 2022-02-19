@@ -34,7 +34,7 @@ test("merge on node conflict", () => {
     { $id: "a", $type: "A", prop: "foo" },
     { $id: "a", prop: "bar" },
   ];
-  const $u = resolve({ data, onNodeConflict: "merge" });
+  const $u = resolve({ data, onConflict: "merge" });
   expect($u.ok).toBeTruthy();
   expect($u.value?.nodes.get("a")).toMatchObject({
     $id: "a",
@@ -48,7 +48,7 @@ test("ignore on node conflict", () => {
     { $id: "a", $type: "A", prop: "foo" },
     { $id: "a", prop: "bar" },
   ];
-  const $u = resolve({ data, onNodeConflict: "ignore" });
+  const $u = resolve({ data, onConflict: "ignore" });
   expect($u.ok).toBeTruthy();
   expect($u.value?.nodes.get("a")).toMatchObject({
     $id: "a",

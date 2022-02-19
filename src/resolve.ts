@@ -7,10 +7,10 @@ type Issue =
 
 export function resolve({
   data,
-  onNodeConflict = "abort",
+  onConflict = "abort",
 }: {
   data: Readonly<Array<Obj>>;
-  onNodeConflict?: "abort" | "merge" | "ignore";
+  onConflict?: "abort" | "merge" | "ignore";
 }): Result<Result.Ok<Graph>, Result.Err<"INVALID", { issues: Issue[] }>> {
   const nodes = new Map<string, Node>();
   const graph: Graph = Object.assign(new Set<Obj>(), { nodes });
@@ -61,12 +61,12 @@ export function resolve({
       Object.assign(existingNode, node);
       parseProps(existingNode, path);
     } else {
-      if (onNodeConflict === "abort") {
+      if (onConflict === "abort") {
         return Result.err("CONFLICT").$info({ id, node, path });
-      } else if (onNodeConflict === "merge") {
+      } else if (onConflict === "merge") {
         Object.assign(existingNode, node);
         parseProps(existingNode, path);
-      } else if (onNodeConflict === "ignore") {
+      } else if (onConflict === "ignore") {
         // ... pass
       }
     }

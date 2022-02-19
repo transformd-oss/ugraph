@@ -1,8 +1,9 @@
 import { Result } from "esresult";
-import { Graph, Node, Obj, isNode, isReference } from "./graph";
+import { Graph, Node, Obj } from "./graph";
 
 type Error =
   | Result.Err<"NODE", { id: string; obj: Obj; path: string[] }>
+  | Result.Err<"CONFLICT", { path: string[]; node: Node }>
   | Result.Err<"REFERENCE", { id: string; path: string[] }>;
 
 /**
@@ -13,114 +14,85 @@ export function resolve({
   data,
   onConflict = "abort",
 }: {
-  data: Readonly<Array<Obj>>;
+  data: unknown;
   onConflict?: "abort" | "merge" | "ignore";
 }): Result<Result.Ok<Graph>, Result.Err<"INVALID", { errors: Error[] }>> {
   const nodes = new Map<string, Node>();
-  const graph: Graph = Object.assign(new Set<Obj>(), { nodes });
-
-  /////////////////////////////
-
   const errors = new Set<Error>();
   const placeholders = new Set<Placeholder>();
+  const graph: Graph = { data: walk(data), nodes };
 
   /////////////////////////////
 
-  for (const index in data) {
-    const obj = { ...data[index] }; // dereference from data
-    graph.add(obj);
-
-    const path = [index];
-
-    if (isNode(obj)) {
-      const $node = parseNode(obj, path);
-      if (!$node.ok) {
-        const $issue = Result.err("NODE")
-          .$cause($node)
-          .$info({ id: obj.$id, obj, path });
-        errors.add($issue);
-      }
-    } else {
-      parseProps(obj, path);
+  function walkObj(source: Obj, path: string[] = []): Obj {
+    const obj: Obj = {};
+    for (const key in source) {
+      const value = source[key];
+      obj[key] = walk(value, [...path, key]);
     }
+    return obj;
   }
 
-  /////////////////////////////
+  function walk(source: unknown, path: string[] = []): unknown {
+    if (isNode(source)) {
+      const node = source;
 
-  function parseNode(
-    node: Node,
-    path: string[]
-  ): Result<Node, "CONFLICT", { id: string; node: Node; path: string[] }> {
-    const id = node.$id;
-    const existingNode = nodes.get(id);
+      const id = node.$id;
+      const existingNode = nodes.get(id);
 
-    if (!existingNode) {
-      nodes.set(id, node);
-      parseProps(node, path);
-      return Result.ok(node);
-    }
-
-    if (isPlaceholder(existingNode)) {
-      delete (existingNode as Node)["$placeholder"];
-      Object.assign(existingNode, node);
-      parseProps(existingNode, path);
-    } else {
-      if (onConflict === "abort") {
-        return Result.err("CONFLICT").$info({ id, node, path });
-      } else if (onConflict === "merge") {
-        Object.assign(existingNode, node);
-        parseProps(existingNode, path);
-      } else if (onConflict === "ignore") {
-        // ... pass
-      }
-    }
-
-    return Result.ok(existingNode);
-  }
-
-  /////////////////////////////
-
-  function parseProps(
-    obj: Obj,
-    path: string[]
-  ): Result<undefined, "NODE", { id: string; node: Node; path: string[] }> {
-    for (const key in obj) {
-      if (key === "$id" || key === "$type") continue;
-
-      const value = obj[key];
-      if (!isReference(value)) continue;
-
-      const keyPath = [...path, key];
-
-      if (typeof value.$node === "string") {
-        const nodeId = value.$node;
-        const node = nodes.get(nodeId);
-        if (!node) {
-          const placeholder = { $placeholder: { id: nodeId, path: keyPath } };
-          placeholders.add(placeholder);
-          nodes.set(nodeId, placeholder as unknown as Node);
-          obj[key] = placeholder;
+      if (existingNode) {
+        if (isPlaceholder(existingNode)) {
+          delete (existingNode as Node)["$placeholder"];
+          Object.assign(existingNode, walkObj(node, path));
         } else {
-          obj[key] = node;
+          if (onConflict === "abort") {
+            errors.add(Result.err("CONFLICT").$info({ path, node }));
+          } else if (onConflict === "merge") {
+            Object.assign(existingNode, walkObj(node, path));
+          }
         }
-      } else if (typeof value.$node === "object") {
-        const $obj = parseNode(value.$node, keyPath);
-        if (!$obj.ok) return Result.err("NODE").$cause($obj).$info($obj.info);
-        obj[key] = $obj.value;
+        return existingNode;
       } else {
-        // ... pass
+        const newNode = walkObj(node, path) as Node;
+        nodes.set(id, newNode);
+        return newNode;
       }
     }
 
-    return Result.ok(undefined);
+    if (isReference(source)) {
+      const { $node } = source;
+
+      if (typeof $node === "string") {
+        const id = $node;
+        const node = nodes.get(id);
+        if (node) return node;
+
+        const placeholder = { $placeholder: { id, path } };
+        placeholders.add(placeholder);
+        nodes.set(id, placeholder as unknown as Node);
+        return placeholder;
+      }
+
+      return walk($node, path);
+    }
+
+    if (Array.isArray(source)) {
+      return source.map((value, index) => walk(value, [...path, `${index}`]));
+    }
+
+    if (source && typeof source === "object") {
+      return walkObj(source as Obj, path);
+    }
+
+    return source;
   }
 
   /////////////////////////////
 
   placeholders.forEach((placeholder) => {
     if (isPlaceholder(placeholder)) {
-      const $issue = Result.err("REFERENCE").$info(placeholder.$placeholder);
-      errors.add($issue);
+      const $error = Result.err("REFERENCE").$info(placeholder.$placeholder);
+      errors.add($error);
     }
   });
 
@@ -134,11 +106,39 @@ export function resolve({
 
 /////////////////////////////
 
+export interface Reference {
+  $node: string | Node;
+}
+
 interface Placeholder {
   $placeholder: {
     id: string;
     path: string[];
   };
+}
+
+/////////////////////////////
+
+export function isNode($: unknown): $ is Node {
+  if (!$) return false;
+  if (!(typeof $ === "object")) return false;
+  const id = ($ as Node).$id;
+  if (!(typeof id === "string")) return false;
+  return true;
+}
+
+export function isReference($: unknown): $ is Reference {
+  if (!$) return false;
+  if (!(typeof $ === "object")) return false;
+  if (
+    !(
+      "$node" in $ &&
+      (typeof ($ as Reference).$node === "string" ||
+        isNode(($ as Reference).$node))
+    )
+  )
+    return false;
+  return true;
 }
 
 function isPlaceholder($: unknown): $ is Placeholder {

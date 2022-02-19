@@ -3,17 +3,17 @@ import { resolve } from "./resolve";
 test("with only objects", () => {
   const data = [{ a: "1" }, { b: "2" }, { c: "3" }];
   const u = resolve({ data }).orUndefined();
-  expect(u?.size).toBe(3);
+  expect(u?.data).toHaveLength(3);
   expect(u?.nodes.size).toBe(0);
-  expect(Array.from(u?.values() ?? [])).toEqual(data);
+  expect(Array.from(u?.data as typeof data)).toEqual(data);
 });
 
 test("with some nodes", () => {
   const data = [{ a: "1" }, { $id: "b:2", $type: "B" }];
   const u = resolve({ data }).orUndefined();
-  expect(u?.size).toBe(2);
+  expect(u?.data).toHaveLength(2);
   expect(u?.nodes.size).toBe(1);
-  expect(Array.from(u?.values() ?? [])).toEqual(data);
+  expect(Array.from(u?.data as typeof data)).toEqual(data);
 });
 
 test("abort on node conflict", () => {
@@ -22,11 +22,12 @@ test("abort on node conflict", () => {
   expect($u.ok).toBeFalsy();
   if ($u.ok) return;
   expect($u.error).toBe("INVALID");
-  expect($u.info.errors).toHaveLength(1);
-  expect($u.info.errors[0]).toMatchObject({
-    error: "NODE",
-    info: { id: "a" },
-  });
+  expect($u.info.errors).toMatchObject([
+    {
+      error: "CONFLICT",
+      info: { path: ["1"] },
+    },
+  ]);
 });
 
 test("merge on node conflict", () => {
@@ -74,9 +75,9 @@ test("with some nested nodes", () => {
   const $u = resolve({ data });
   const u = $u.value;
   expect($u.ok).toBeTruthy();
-  expect(u?.size).toBe(1);
+  expect(u?.data).toHaveLength(1);
   expect(u?.nodes.size).toBe(3);
-  expect(Array.from(u?.values() ?? [])).toEqual([
+  expect(u?.data as typeof data).toEqual([
     {
       $id: "a:1",
       $type: "A",
@@ -105,7 +106,7 @@ test("with many references to one node", () => {
   const $u = resolve({ data });
   const u = $u.value;
   expect($u.ok).toBeTruthy();
-  expect(u?.size).toBe(3);
+  expect(u?.data).toHaveLength(3);
   expect(u?.nodes.size).toBe(3);
   const a = u?.nodes.get("a:1");
   expect(a).toBeDefined();
@@ -126,8 +127,39 @@ test("with references on a simple object", () => {
   ];
   const $u = resolve({ data });
   expect($u.ok).toBeTruthy();
-  expect(Array.from($u.value?.values() ?? [])[0]).toMatchObject({
-    a: $u.value?.nodes.get("a:1"),
+  if (!$u.ok) return;
+
+  expect(($u.value.data as typeof data)[0]).toMatchObject({
+    a: $u.value.nodes.get("a:1"),
+  });
+});
+
+test("with references in nested object data structure", () => {
+  const data = [
+    {
+      $id: "A",
+      $type: "object",
+      of: {
+        prop: { $type: "node", of: { $node: "B" } },
+      },
+    },
+    {
+      $id: "B",
+      $type: "object",
+      of: {},
+    },
+  ];
+  const $u = resolve({ data });
+  expect($u.ok).toBeTruthy();
+  if (!$u.ok) return;
+
+  const u = $u.value;
+  expect(u.nodes.get("A")).toMatchObject({
+    $id: "A",
+    $type: "object",
+    of: {
+      prop: { $type: "node", of: u.nodes.get("B") },
+    },
   });
 });
 

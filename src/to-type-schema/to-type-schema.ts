@@ -1,6 +1,6 @@
 import { Result } from "esresult";
 import { z, ZodTypeAny } from "zod";
-import { Typed } from "./graph";
+import { Typed } from "../graph";
 
 export function toTypeSchema(
   typed: Typed

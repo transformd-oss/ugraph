@@ -1,7 +1,7 @@
 import { Result } from "esresult";
 import { z } from "zod";
-import { Graph, Obj, Node, Typed, isObj, isNode, isTyped } from "./graph";
-import { toTypeSchema } from "./to-type-schema";
+import { Graph, Obj, Node, Typed, isObj, isNode, isTyped } from "../graph";
+import { toTypeSchema } from "../to-type-schema";
 
 /////////////////////////////
 

@@ -1,4 +1,4 @@
-import { Obj } from "./graph";
+import { Obj } from "../graph";
 import { parse } from "./parse";
 
 test("with only objects", () => {

@@ -2,24 +2,27 @@
 
 An expressive, serialisable format for Graph-like data structures.
 
-# Parsers
+## Usage
 
-- JavaScript/TypeScript (here)
+- uGraph is primarily a serialisable [Format](#format).
+- This repo publishes [`ugraph`](https://www.npmjs.com/package/ugraph), a parser implementation for TS/JS on NPM.
 
-## Installation
+## Parser
 
 ```bash
 yarn add ugraph
 ```
 
-## Usage
-
-### Simple
-
 ```ts
 import { parse } from "ugraph";
 
-const $graph = parse({ data: [{ $id: "foo" }, { $id: "bar" }] })
+const data = [
+  { $id: "abc" },
+  { $id: "foo", prop: { $node: "bar" } },
+  { $id: "bar", prop: { $node: "foo" } },
+];
+
+const $graph = parse({ data });
 
 // handle errors
 if (!$graph.ok) ...
@@ -27,20 +30,23 @@ if (!$graph.ok) ...
 // use valid graph
 const graph = $graph.value
 
->>> graph
-// [{ $id: "foo" }, { $id: "bar" }]
+// parses consistent object references
+>>> foo = graph.nodes.get("foo")
+>>> bar = graph.nodes.get("bar")
 
->>> graph.nodes.get("foo")
-// { $id: "foo" }
+>>> foo.prop === bar
+// true
+>>> bar.prop === foo
+// true
 ```
 
 ### With Types
 
 - [`example.ts`](example.ts)
 
-# Concepts
+## Format
 
-## **Node**
+### `Node`
 
 `{ $id: string }`
 
@@ -52,7 +58,7 @@ const graph = $graph.value
 }
 ```
 
-## **Reference** (i.e. Edges)
+### `Reference` (i.e. Edges)
 
 `{ $node: string }`
 
@@ -64,7 +70,7 @@ const graph = $graph.value
 }
 ```
 
-### **Reference** with Inline **Node**
+#### Reference with Inline Node
 
 `{ $node: Node }`
 
@@ -77,7 +83,7 @@ const graph = $graph.value
 }
 ```
 
-### **Reference** with Properties
+#### Reference with Properties
 
 `{ $node: string | Node, [key]: any }`
 
@@ -102,7 +108,7 @@ const graph = $graph.value
 }
 ```
 
-### **Reference** with **References** to **Nodes**
+#### Reference with References to Nodes
 
 `{ $node: string | Node, [key]: Reference }`
 
@@ -134,7 +140,7 @@ const graph = $graph.value
 }
 ```
 
-### **References** to **Node** Properties (i.e. **Accessors**)
+#### References to Node Properties (i.e. Accessors)
 
 `{ $node: string | Node, $path: string }`
 
@@ -155,7 +161,7 @@ const graph = $graph.value
 ]
 ```
 
-### **References** to Computed **Node** Properties (i.e. **Dynamic Accessors**)
+#### References to Computed Node Properties (i.e. Dynamic Accessors)
 
 - If supported by the parser, Nodes can define their own runtime interfaces for
   supporting "computed" properties that can be resolved when targetted by
@@ -179,7 +185,7 @@ const graph = $graph.value
 ]
 ```
 
-## **Typed**
+### `Typed`
 
 - Different Objects often represent different types of domain-specific entities.
 - These types can be assigned with the `"$type"` property.
@@ -191,7 +197,7 @@ const graph = $graph.value
 { "$type": "Post", ... }
 ```
 
-### Data Types
+#### Data Types
 
 - If you want validate all Typeds you can express data structures with type
   built-ins which may also be composed as Nodes.
@@ -231,7 +237,7 @@ const graph = $graph.value
 }
 ```
 
-### Composing Data Types
+#### Composing Data Types
 
 - Because data types also exist in the graph, they can:
   - be Nodes,
@@ -239,7 +245,7 @@ const graph = $graph.value
   - reference other Nodes (to represent complex data structures),
   - function as aliases to decorate otherwise plain primitive types.
 
-#### Composing Complex Objects
+##### Composing Complex Objects
 
 ```jsonc
 [
@@ -258,7 +264,7 @@ const graph = $graph.value
 ]
 ```
 
-#### Aliasing Primitives
+##### Aliasing Primitives
 
 ```jsonc
 [

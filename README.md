@@ -140,7 +140,7 @@ const graph = $graph.value
 }
 ```
 
-#### References to Node Properties (i.e. Accessors)
+### `Accessors` (i.e. References to Node Properties)
 
 `{ $node: string | Node, $path: string }`
 

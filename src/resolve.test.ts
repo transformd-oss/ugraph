@@ -22,8 +22,8 @@ test("abort on node conflict", () => {
   expect($u.ok).toBeFalsy();
   if ($u.ok) return;
   expect($u.error).toBe("INVALID");
-  expect($u.info.issues).toHaveLength(1);
-  expect($u.info.issues[0]).toMatchObject({
+  expect($u.info.errors).toHaveLength(1);
+  expect($u.info.errors[0]).toMatchObject({
     error: "NODE",
     info: { id: "a" },
   });
@@ -142,5 +142,5 @@ test("with bad references", () => {
   const $u = resolve({ data });
   expect($u.ok).toBeFalsy();
   if ($u.ok) return;
-  expect($u.info.issues).toHaveLength(3);
+  expect($u.info.errors).toHaveLength(3);
 });

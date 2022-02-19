@@ -1,23 +1,27 @@
 import { Result } from "esresult";
 import { Graph, Node, Obj, isNode, isReference } from "./graph";
 
-type Issue =
+type Error =
   | Result.Err<"NODE", { id: string; obj: Obj; path: string[] }>
   | Result.Err<"REFERENCE", { id: string; path: string[] }>;
 
+/**
+ * Given `data` array of Objects/Nodes, will resolve a runtime Graph with all
+ * References recursively resolved and `.nodes` flattened for access via. `$id`.
+ */
 export function resolve({
   data,
   onConflict = "abort",
 }: {
   data: Readonly<Array<Obj>>;
   onConflict?: "abort" | "merge" | "ignore";
-}): Result<Result.Ok<Graph>, Result.Err<"INVALID", { issues: Issue[] }>> {
+}): Result<Result.Ok<Graph>, Result.Err<"INVALID", { errors: Error[] }>> {
   const nodes = new Map<string, Node>();
   const graph: Graph = Object.assign(new Set<Obj>(), { nodes });
 
   /////////////////////////////
 
-  const issues = new Set<Issue>();
+  const errors = new Set<Error>();
   const placeholders = new Set<Placeholder>();
 
   /////////////////////////////
@@ -34,7 +38,7 @@ export function resolve({
         const $issue = Result.err("NODE")
           .$cause($node)
           .$info({ id: obj.$id, obj, path });
-        issues.add($issue);
+        errors.add($issue);
       }
     } else {
       parseProps(obj, path);
@@ -116,12 +120,12 @@ export function resolve({
   placeholders.forEach((placeholder) => {
     if (isPlaceholder(placeholder)) {
       const $issue = Result.err("REFERENCE").$info(placeholder.$placeholder);
-      issues.add($issue);
+      errors.add($issue);
     }
   });
 
-  if (issues.size)
-    return Result.err("INVALID").$info({ issues: Array.from(issues.values()) });
+  if (errors.size)
+    return Result.err("INVALID").$info({ errors: Array.from(errors.values()) });
 
   /////////////////////////////
 

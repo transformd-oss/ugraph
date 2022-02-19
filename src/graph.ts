@@ -8,6 +8,16 @@ export interface Graph extends Set<Obj> {
 
 /////////////////////////////
 
+export type Instance<
+  TYPE extends string | undefined = string,
+  PROPS extends Record<string, unknown> = Record<string, unknown>
+> = {
+  $id?: string;
+  $type: TYPE;
+} & PROPS;
+
+/////////////////////////////
+
 export type Node<
   TYPE extends string | undefined = string,
   PROPS extends Record<string, unknown> = Record<string, unknown>

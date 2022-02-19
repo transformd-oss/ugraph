@@ -1,5 +1,5 @@
 import { Obj } from "./graph";
-import { parse } from "./resolve";
+import { parse } from "./parse";
 
 test("with only objects", () => {
   const data = [{ a: "1" }, { b: "2" }, { c: "3" }];

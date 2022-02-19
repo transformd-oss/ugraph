@@ -30,17 +30,30 @@ export function toTypeSchema(
 
 /////////////////////////////
 
-const tobj = z.object({
-  $type: z.string(),
-});
+interface Type<SCHEMA extends ZodTypeAny = ZodTypeAny> {
+  schema: SCHEMA;
+  build(props: z.infer<SCHEMA>): ZodTypeAny | Result<ZodTypeAny>;
+}
 
-const types: Record<string, Type> = {
-  string: type(tobj, () => z.string()),
-  number: type(tobj, () => z.number()),
-  boolean: type(tobj, () => z.boolean()),
+function type<SCHEMA extends ZodTypeAny>(
+  schema: Type<SCHEMA>["schema"],
+  build: Type<SCHEMA>["build"]
+): Type<SCHEMA> {
+  return {
+    schema,
+    build,
+  };
+}
+
+/////////////////////////////
+
+export const types: Record<string, Type> = {
+  string: type(Typed, () => z.string()),
+  number: type(Typed, () => z.number()),
+  boolean: type(Typed, () => z.boolean()),
   array: type(
-    tobj.extend({
-      of: tobj.passthrough(),
+    Typed.extend({
+      of: Typed.passthrough(),
     }),
     ({ of: _of }) => {
       const $ofSchema = toTypeSchema(_of);
@@ -51,9 +64,9 @@ const types: Record<string, Type> = {
     }
   ),
   object: type(
-    tobj.extend({
+    Typed.extend({
       of: z.record(
-        tobj.extend({ required: z.boolean().optional() }).passthrough()
+        Typed.extend({ required: z.boolean().optional() }).passthrough()
       ),
     }),
     ({ of: _of }) => {
@@ -72,29 +85,20 @@ const types: Record<string, Type> = {
     }
   ),
   node: type(
-    tobj.extend({
+    Typed.extend({
       of: z.object({ $id: z.string() }).passthrough(),
     }),
     ({ of: _of }) => {
       const type = _of.$id;
-      return Result.ok(tobj.extend({ $type: z.literal(type) }));
+      return Typed.extend({ $type: z.literal(type) });
     }
   ),
 };
 
-/////////////////////////////
+type ZodTypeAnyUnion = [ZodTypeAny, ZodTypeAny, ...ZodTypeAny[]];
 
-interface Type<SCHEMA extends ZodTypeAny = ZodTypeAny> {
-  schema: SCHEMA;
-  build(props: z.infer<SCHEMA>): ZodTypeAny | Result<ZodTypeAny>;
-}
-
-function type<SCHEMA extends ZodTypeAny>(
-  schema: Type<SCHEMA>["schema"],
-  build: Type<SCHEMA>["build"]
-): Type<SCHEMA> {
-  return {
-    schema,
-    build,
-  };
-}
+types.type = type(Typed, () => {
+  return z.union(
+    Object.values(types).map((type) => type.schema) as ZodTypeAnyUnion
+  );
+});

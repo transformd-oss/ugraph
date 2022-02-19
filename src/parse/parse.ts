@@ -1,7 +1,7 @@
 import { Result } from "esresult";
-import { z } from "zod";
+import { z, ZodTypeAny } from "zod";
 import { Graph, Obj, Node, Typed, isObj, isNode, isTyped } from "../graph";
-import { toTypeSchema } from "../to-type-schema";
+import { toTypeSchema, types as typeTypes } from "../to-type-schema";
 
 /////////////////////////////
 
@@ -167,7 +167,6 @@ export function parse({
           Result.err("TYPED_INVALID_TYPE").$info({ path, typed, type })
         )
       );
-
       return;
     }
 
@@ -265,10 +264,23 @@ function isPending(source: unknown): source is Pending {
 
 /////////////////////////////
 
+type TypedError = { path: string[]; message: unknown; info?: unknown };
+
+interface TypeValidator {
+  (typed: Typed): TypedError[];
+}
+
 export type TypesError =
   | Result.Err<"RESOLVE">
-  | Result.Err<"INVALID", { id: string; type: unknown }>
-  | Result.Err<"VALIDATOR", { id: string; type: Typed }>;
+  | Result.Err<"INVALID_TYPED", { id: string; type: unknown }>
+  | Result.Err<"INVALID_PROPS", { id: string; type: Typed }>;
+
+const defaultTypeValidators = new Map<string, TypeValidator>(
+  Object.entries(typeTypes).map(([name, typeType]) => [
+    name,
+    createTypeValidator(typeType.schema),
+  ])
+);
 
 export function resolveTypeValidators(
   types: unknown
@@ -276,7 +288,7 @@ export function resolveTypeValidators(
   Map<string, TypeValidator>,
   Result.Err<"TYPES_INVALID", { errors: TypesError[] }>
 > {
-  const typeValidators = new Map<string, TypeValidator>();
+  const typeValidators = new Map<string, TypeValidator>(defaultTypeValidators);
 
   if (types) {
     type Type = Node & Typed;
@@ -290,7 +302,7 @@ export function resolveTypeValidators(
         } else if (isNode(type) && isTyped(type)) {
           typesNodes.set(id, type);
         } else {
-          typesErrors.add(Result.err("INVALID").$info({ id, type }));
+          typesErrors.add(Result.err("INVALID_TYPED").$info({ id, type }));
         }
       }
     } else {
@@ -302,22 +314,24 @@ export function resolveTypeValidators(
           if (isTyped(type)) {
             typesNodes.set(id, type);
           } else {
-            typesErrors.add(Result.err("INVALID").$info({ id, type }));
+            typesErrors.add(Result.err("INVALID_TYPED").$info({ id, type }));
           }
         });
       }
     }
 
     for (const [id, type] of typesNodes) {
-      const $typeValidator = toTypeValidator(type);
-      if (!$typeValidator.ok) {
+      const $schema = toTypeSchema(type);
+      if (!$schema.ok) {
         typesErrors.add(
-          Result.err("VALIDATOR").$cause($typeValidator).$info({ id, type })
+          Result.err("INVALID_PROPS").$cause($schema).$info({ id, type })
         );
-      } else {
-        const typeValidator = $typeValidator.value;
-        typeValidators.set(id, typeValidator);
+        continue;
       }
+      const schema = $schema.value;
+      const typeValidator = createTypeValidator(schema);
+
+      typeValidators.set(id, typeValidator);
     }
 
     if (typesErrors.size)
@@ -329,21 +343,9 @@ export function resolveTypeValidators(
   return Result.ok(typeValidators);
 }
 
-/////////////////////////////
-
-interface TypeValidator {
-  (typed: Typed): TypedError[];
-}
-
-type TypedError = { path: string[]; message: unknown; info?: unknown };
-
-function toTypeValidator(typed: Typed): Result<TypeValidator, "SCHEMA"> {
-  const $schema = toTypeSchema(typed);
-  if (!$schema.ok) return Result.err("SCHEMA").$cause($schema);
-
-  const schema = $schema.value;
-  const validator: TypeValidator = (typed) => {
-    const $parse = schema.safeParse(typed);
+function createTypeValidator(schema: ZodTypeAny): TypeValidator {
+  return (type) => {
+    const $parse = schema.safeParse(type);
     if ($parse.success) return [];
 
     return $parse.error.issues.map((issue) => ({
@@ -352,8 +354,6 @@ function toTypeValidator(typed: Typed): Result<TypeValidator, "SCHEMA"> {
       info: issue,
     }));
   };
-
-  return Result.ok(validator);
 }
 
 /////////////////////////////

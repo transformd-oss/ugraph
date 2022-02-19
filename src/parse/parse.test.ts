@@ -159,15 +159,12 @@ test("with references in nested object data structure", () => {
     },
   ];
   const $u = parse({ data });
-  expect($u.ok).toBeTruthy();
-  if (!$u.ok) return;
-
-  const u = $u.value;
-  expect(u.nodes.get("A")).toMatchObject({
+  expect($u).toMatchObject({ ok: true });
+  expect($u.value?.nodes.get("A")).toMatchObject({
     $id: "A",
     $type: "object",
     of: {
-      prop: { $type: "node", of: u.nodes.get("B") },
+      prop: { $type: "node", of: $u.value?.nodes.get("B") },
     },
   });
 });
@@ -181,7 +178,226 @@ test("with bad references", () => {
     },
   ];
   const $u = parse({ data });
-  expect($u.ok).toBeFalsy();
-  if ($u.ok) return;
-  expect($u.info.errors).toHaveLength(3);
+  expect($u).toMatchObject({
+    ok: false,
+    error: "DATA_INVALID",
+    info: {
+      errors: [{}, {}, {}],
+    },
+  });
+});
+
+test("with all complete types", () => {
+  const $u = parse({
+    data: [
+      {
+        $id: "A:a:rlmpnimf6v",
+        $type: "A",
+        name: "a",
+        prop1: "abc",
+        prop2: 123,
+        prop3: true,
+        prop4: { $node: "B:b:ki5j45k1qu" },
+      },
+      {
+        $id: "B:b:ki5j45k1qu",
+        $type: "B",
+        name: "b",
+      },
+    ],
+    types: [
+      {
+        $id: "A",
+        $type: "object",
+        of: {
+          name: { $type: "string" },
+          prop1: { $type: "string" },
+          prop2: { $type: "number" },
+          prop3: { $type: "boolean" },
+          prop4: { $type: "node", of: { $node: "B" } },
+        },
+      },
+      {
+        $id: "B",
+        $type: "object",
+        of: {
+          name: { $type: "string" },
+        },
+      },
+    ],
+  });
+  expect($u).toMatchObject({
+    ok: true,
+  });
+});
+
+test("with missing types", () => {
+  const $u = parse({
+    data: [
+      {
+        $id: "A:a:rlmpnimf6v",
+        $type: "A",
+      },
+      {
+        $id: "B:b:ki5j45k1qu",
+        $type: "B",
+      },
+    ],
+    types: [
+      {
+        $id: "A",
+        $type: "object",
+        of: {},
+      },
+    ],
+  });
+  expect($u).toMatchObject({
+    ok: false,
+    error: "DATA_INVALID",
+    info: {
+      errors: [
+        {
+          error: "TYPED_INVALID_TYPE",
+          info: { path: ["1"] },
+        },
+      ],
+    },
+  });
+});
+
+test("with incomplete types", () => {
+  const $u = parse({
+    data: [],
+    types: [
+      {
+        $id: "A",
+        $type: "object",
+      },
+    ],
+  });
+  expect($u).toMatchObject({
+    ok: false,
+    error: "TYPES_INVALID",
+    info: {
+      errors: [
+        {
+          error: "INVALID_PROPS",
+          info: {
+            id: "A",
+          },
+        },
+      ],
+    },
+  });
+});
+
+test("with invalid data", () => {
+  const $u = parse({
+    data: [
+      { $id: "foo", $type: "Foo" },
+      { $id: "bar", $type: "Bar", foo: "foo" },
+    ],
+    types: [
+      {
+        $id: "Foo",
+        $type: "object",
+        of: {},
+      },
+      {
+        $id: "Bar",
+        $type: "object",
+        of: { foo: { $type: "node", of: { $node: "Foo" } } },
+      },
+    ],
+  });
+  expect($u).toMatchObject({
+    ok: false,
+    error: "DATA_INVALID",
+    info: {
+      errors: [{ error: "TYPED_INVALID_PROPS", info: { path: ["1"] } }],
+    },
+  });
+});
+
+const Field_user = {
+  $id: "A",
+  $type: "Field",
+  name: "user",
+  valueType: {
+    $type: "object",
+    of: {
+      name: { $node: "Name" },
+      age: { $type: "number" },
+      address: { $node: "Address" },
+    },
+  },
+};
+const object_Address = {
+  $id: "Address",
+  $type: "object",
+  of: {
+    line1: { $type: "string" },
+    line2: { $type: "string" },
+    city: { $type: "string" },
+    state: { $type: "string" },
+    postcode: { $type: "string" },
+    country: { $type: "string" },
+  },
+};
+const string_Name = {
+  $id: "Name",
+  $type: "string",
+};
+
+test("with type definition data properties", () => {
+  const $u = parse({
+    data: [Field_user, object_Address, string_Name],
+    types: [
+      {
+        $id: "Field",
+        $type: "object",
+        of: {
+          name: { $type: "string" },
+          valueType: { $type: "type" },
+        },
+      },
+    ],
+  });
+  expect($u).toMatchObject({
+    ok: true,
+  });
+});
+
+test("with type definition invalid data properties", () => {
+  const $u = parse({
+    data: [
+      { ...Field_user, name: { $node: "Name" } }, // should be string
+      object_Address,
+      string_Name,
+    ],
+    types: [
+      {
+        $id: "Field",
+        $type: "object",
+        of: {
+          name: { $type: "string" },
+          valueType: { $type: "type" },
+        },
+      },
+    ],
+  });
+  expect($u).toMatchObject({
+    ok: false,
+    error: "DATA_INVALID",
+    info: {
+      errors: [
+        {
+          error: "TYPED_INVALID_PROPS",
+          info: {
+            issues: [{ path: ["name"] }],
+          },
+        },
+      ],
+    },
+  });
 });

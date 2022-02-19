@@ -47,28 +47,9 @@ jobs:
           name: dist
           path: dist
 
-  test-acceptance:
-    name: Acceptance Tests
-    needs: [test-unit, build]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: "16"
-          cache: "yarn"
-      - run: yarn install --frozen-lockfile
-
-      - uses: actions/download-artifact@v2
-        with:
-          name: dist
-          path: dist
-
-      - run: yarn test:acceptance
-
   deploy:
     name: Deploy
-    needs: test-acceptance
+    needs: [test-unit, build]
     if: ${{ github.event.inputs.deploy == 'y' }}
     concurrency:
       group: publish

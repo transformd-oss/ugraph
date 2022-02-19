@@ -7,6 +7,5 @@
       }
     ]
   },
-  "testPathIgnorePatterns": ["acceptance"],
   "modulePathIgnorePatterns": ["dist"]
 }

@@ -13,8 +13,6 @@
     "dev": "yarn test && yarn test:ts && yarn lint",
     "test": "./scripts/test.sh",
     "test:ts": "./scripts/test-ts.sh",
-    "test:unit": "./scripts/test-unit.sh",
-    "test:acceptance": "./scripts/test-acceptance.sh",
     "lint": "./scripts/lint.sh",
     "build": "./scripts/build.sh",
     "build:version": "./scripts/build-version.sh",

@@ -4,10 +4,15 @@ import { Instance } from "./graph";
 
 export function toTypeSchema(
   inst: Instance
-): Result<ZodTypeAny, "PROPS" | "SCHEMA" | "UNSUPPORTED"> {
+): Result<
+  ZodTypeAny,
+  | Result.Err<"PROPS">
+  | Result.Err<"SCHEMA">
+  | Result.Err<"UNSUPPORTED", { type: string }>
+> {
   const type = inst.$type;
   const typeDefinition = types[type];
-  if (!typeDefinition) return Result.err("UNSUPPORTED");
+  if (!typeDefinition) return Result.err("UNSUPPORTED").$info({ type });
 
   const $props = typeDefinition.schema.safeParse(inst);
   if (!$props.success) return Result.err("PROPS").$cause($props.error);
@@ -25,15 +30,18 @@ export function toTypeSchema(
 
 /////////////////////////////
 
-const instance = z.object({ $type: z.string() });
+const node = z.object({
+  $id: z.string().optional(),
+  $type: z.string(),
+});
 
 const types: Record<string, Type> = {
-  string: type(instance, () => z.string()),
-  number: type(instance, () => z.number()),
-  boolean: type(instance, () => z.boolean()),
+  string: type(node, () => z.string()),
+  number: type(node, () => z.number()),
+  boolean: type(node, () => z.boolean()),
   array: type(
-    instance.extend({
-      of: instance.passthrough(),
+    node.extend({
+      of: node.passthrough(),
     }),
     ({ of: _of }) => {
       const $ofSchema = toTypeSchema(_of);
@@ -44,9 +52,9 @@ const types: Record<string, Type> = {
     }
   ),
   object: type(
-    instance.extend({
+    node.extend({
       of: z.record(
-        instance.extend({ required: z.boolean().optional() }).passthrough()
+        node.extend({ required: z.boolean().optional() }).passthrough()
       ),
     }),
     ({ of: _of }) => {
@@ -62,6 +70,15 @@ const types: Record<string, Type> = {
         schema = schema.extend({ [key]: valueSchema });
       }
       return Result.ok(schema);
+    }
+  ),
+  node: type(
+    node.extend({
+      of: z.object({ $id: z.string() }).passthrough(),
+    }),
+    ({ of: _of }) => {
+      const type = _of.$id;
+      return Result.ok(node.extend({ $type: z.literal(type) }));
     }
   ),
 };

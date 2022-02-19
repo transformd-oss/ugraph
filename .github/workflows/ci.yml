@@ -21,7 +21,6 @@ jobs:
       BUILD_CHANNEL: ""
       # BUILD_CHANNEL: "sha"
     outputs:
-      BUILD_TAG: ${{ steps.tag.outputs.tag }}
       BUILD_CHANNEL: ${{ env.BUILD_CHANNEL }}
     steps:
       - uses: actions/checkout@v2
@@ -37,15 +36,6 @@ jobs:
             "yarn test:ts" \
             "yarn build" \
             "yarn docs"
-
-      - if: ${{ env.BUILD_CHANNEL == '' }}
-        run: oTAG= yarn build:version
-
-      - if: ${{ env.BUILD_CHANNEL == 'sha' }}
-        run: oTAG= oSHA= yarn build:version
-
-      - id: tag
-        run: echo "::set-output name=tag::$(git describe --tags --abbrev=0 2>/dev/null)"
 
       - uses: actions/upload-artifact@v2
         with:
@@ -68,14 +58,22 @@ jobs:
     env:
       # workaround https://github.com/JS-DevTools/npm-publish/issues/15
       INPUT_TOKEN: ""
-      BUILD_TAG: ${{ needs.build.outputs.BUILD_TAG }}
       PUBLISH_CHANNEL: ${{ needs.build.outputs.BUILD_CHANNEL == '' && 'latest' || needs.build.outputs.BUILD_CHANNEL }}
     steps:
       - uses: actions/checkout@v2
+      - uses: bahmutov/npm-install@v1
+      - run: yarn install --frozen-lockfile
+
       - uses: actions/download-artifact@v2
         with:
           name: dist
           path: dist
+
+      - if: ${{ env.BUILD_CHANNEL == '' }}
+        run: oTAG= yarn build:version
+
+      - if: ${{ env.BUILD_CHANNEL == 'sha' }}
+        run: oTAG= oSHA= yarn build:version
 
       - run: echo ${{ env.PUBLISH_CHANNEL }}
 
@@ -85,8 +83,6 @@ jobs:
           package: ./dist/package.json
           access: public
           tag: ${{ env.PUBLISH_CHANNEL }}
-
-      - run: git tag ${{ env.BUILD_TAG }}
 
       - uses: ad-m/github-push-action@master
         with:

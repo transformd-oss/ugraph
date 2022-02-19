@@ -1,217 +1,281 @@
 # μGraph
 
-Expressive JSON format for Graph-like data/object definitions.
+An expressive, serialisable format for Graph-like data structures.
 
-## Objects
+# Parsers
 
-Object definitions are defined as an object {} with a "$type" property:
+- JavaScript/TypeScript (here)
+
+## Installation
+
+```bash
+yarn add ugraph
+```
+
+## Usage
+
+### Simple
+
+```ts
+import { parse } from "ugraph";
+
+const $graph = parse({ data: [{ $id: "foo" }, { $id: "bar" }] })
+
+// handle errors
+if (!$graph.ok) ...
+
+// use valid graph
+const graph = $graph.value
+
+>>> graph
+// [{ $id: "foo" }, { $id: "bar" }]
+
+>>> graph.nodes.get("foo")
+// { $id: "foo" }
+```
+
+### With Types
+
+- [`example.ts`](example.ts)
+
+# Concepts
+
+## **Node**
+
+`{ $id: string }`
+
+- Nodes are Objects with a unique Identifier (`"$id"`) property.
 
 ```jsonc
 {
-  "$type": "Foo"
+  "$id": "foo"
 }
 ```
 
-## Identified Objects (i.e. Nodes)
+## **Reference** (i.e. Edges)
 
-Object definitions can be made globally referencable by assigning an "$id".
-Object definitions without an "$id" are considered anonymous.
+`{ $node: string }`
+
+- All Nodes may be referenced by it's Identifier using a Reference expression.
 
 ```jsonc
 {
-  "$id": "Foo:qnxrs4muvb",
-  "$type": "Foo",
+  "property": { "$node": "bar" }
 }
 ```
 
-## Node References (i.e. Edges)
+### **Reference** with Inline **Node**
 
-Once given an "$id", the Object definition is considered a Node of a graph.
-Other nodes may reference it using a "$node" reference accessor object.
+`{ $node: Node }`
+
+- References may also inline the definition the Node it is referencing.
+- This is useful if you are working with mainly tree-like, acyclical graphs.
 
 ```jsonc
 {
-  "$id": "Bar:sykvs6s4g4",
-  "$type": "Bar",
-  "fooProp": { "$node": "Foo:qnxrs4muvb" }
+  "property": { "$node": { "$id": "bar", /* ... */ } }
 }
 ```
 
-## Nesting Nodes
+### **Reference** with Properties
 
-uGraph differentiates itself from basic JSON graph schemas by allowing for
-defining Nodes within other Nodes as part of a valid uGraph schema. This is
-useful when writing a tree-like graph (DAG) at first, with the flexibility of
-referencing Nodes elsewhere in the `ugraph`.
+`{ $node: string | Node, [key]: any }`
 
-Nodes may be nested within another Object/Node as still be globally referencable
-by "$id". Use an Object definition for "$node" instead of an "$id" string.
-
-> Walking this `ugraph` (as part of parsing/validation) will create a lookup map
-> of all found Identified Objects (Nodes) using their contained "$id"
-> properties.
-
-```jsonc
-[
-  {
-    "$id": "Bar:sykvs6s4g4",
-    "$type": "Bar",
-    "fooProp": { "$node": { "$id": "Foo:4npndimd8r", "$type": "Foo" } }
-  },
-  {
-    "$id": "Bar:604x5kgh2v",
-    "$type": "Bar",
-    "fooProp": { "$node": "Foo:4npndimd8r" }
-  }
-]
-```
-
-## Properties on Node Relationships (i.e. Edges)
-
-There are cases where Edges (from Object/Node to Object/Node) require additional
-"edge"-props to describe contextual information about that relationship.
-
-Depending on the definition style it can be:
-
-1. Object definition with adjacent Edge props
-1. Node definition with adjacent Edge props
-1. Anonymous Node definition with adjacent Edge props
-1. (Node) Reference with adjacent Edge props
+- References may also define contextual properties about the relationship.
 
 ```jsonc
 {
-  "$type": "Cat",
-  "foods": [
-    // (1)
+  "friends": [
     {
-      "$type": "Food",
-      "name": "ccc-cat-food",
-      "edgeProp": "hates"
-    },
-    // (2)
-    {
-      "$node": {
-        "$id": "Food:bbb-cat-food:7cacjlsr52",
-        "$type": "Food",
-        "name": "bbb-cat-food"
-      },
-      "edgeProp": "likes"
-    },
-    // (3)
-    {
-      "$node": {
-        "$type": "Food",
-        "name": "bbb-cat-food"
-      },
-      "edgeProp": "likes"
-    },
-    // (4)
-    {
-      "$node": "Food:aaa-cat-food:59sfpotqwp",
-      "edgeProp": "loves"
+      // reference
+      "$node": "personA",
+      // properties
+      "friendsSince": "2022-01-01T00:00:00.0Z",
+      "friendsUntil": "2023-02-02T00:00:00.0Z"
     }
+  ],
+  // ...
+  "users": [
+    // node
+    { "$id": "personA" }
   ]
 }
 ```
 
-## Node Property Accessor (on Edges)
+### **Reference** with **References** to **Nodes**
 
-Object properties that reference Nodes may be doing so to reference a certain
-property of that Node type. If you want to access a specific property of the
-referenced Node you can specify a "$path" on the Node accessor for that property
-to access a specific value by JSON path.
+`{ $node: string | Node, [key]: Reference }`
 
-You can also target "computed" values of a targetted Node according to the Node
-type's implementation, example:
+- References to Nodes can have contextual properties that also reference other
+  Nodes, forming [hyperedges](https://en.wikipedia.org/wiki/Hypergraph).
 
-1. `Webhook` Node type has `endpoint` property.
-1. `Link` Node `to` property accepts a string or `Webhook` Node Reference.
-1. Without "$path" meta-property the `Link` Node will infer "url" computed
-  value, where the implementation provides "url" is "http://my.site/{endpoint}".
-1. If desired, "$path" can be manually specified as "url".
-1. Or, to provide "$path" to another value of valid property value type.
+```jsonc
+{
+  "favourites": [
+    {
+      // reference (1)
+      "$node": "note:j78arsmqw4",
+      "addedAt": "2022-01-01T00:00:00.0Z",
+      "addedBy": {
+        // reference (2)
+        "$node": "user:vl1vh2i22i"
+      }
+    }
+  ],
+  // ...
+  "notes": [
+    // node (1)
+    { "$id": "note:j78arsmqw4" }
+  ],
+  "users": [
+    // node (2)
+    { "$id": "user:vl1vh2i22i" }
+  ]
+}
+```
+
+### **References** to **Node** Properties (i.e. **Accessors**)
+
+`{ $node: string | Node, $path: string }`
+
+- References may be used to access specific values on a referenced Node using a
+  Accessor expression.
+- The property access `"$path"` uses [JSON Path](https://jsonpath.com/) format.
 
 ```jsonc
 [
   {
-    "$id": "Foo:aonh637g3c",
-    "$type": "Foo",
-    "prop1": "hello",
-    "prop2": "world"
+    "$id": "aaa",
+    "name": "foo"
   },
   {
-    "$id": "Bar:xqlvpfo6pw",
-    "$type": "Bar",
-    // relies on Bar's implementation to pull a value from given Foo object.
-    "myStringProp": { "$node": "Foo:aonh637g3c" },
-    // uses json-path accessor to access value from path from Foo object.
-    "myStringProp": { "$node": "Foo:aonh637g3c", "$path": "$.prop1" }
+    "$id": "bbb",
+    "name": { "$node": "aaa", "$path": "$.name" }
   }
 ]
 ```
 
-## Types
+### **References** to Computed **Node** Properties (i.e. **Dynamic Accessors**)
 
-Supports a core set of data "types" Object definitions that can easily split out
-into a Object node for reusable chunks of type definitions.
+- If supported by the parser, Nodes can define their own runtime interfaces for
+  supporting "computed" properties that can be resolved when targetted by
+  `$path`.
 
-Because this core data "types" are just different types of Nodes, they can are
-implementation dependent -- although it is nice to know how such concepts may
-be declaratively expressed for Nodes in an uGraph.
-
-```jsonc
-// string
-{ "$type": "string" }
-// number
-{ "$type": "number" }
-// boolean
-{ "$type": "boolean" }
-// (string)[]
-{ "$type": "array", "of": { "$type": "string" } }
-// (string)[]
-{ "$type": "array", "of": { "$type": "string", "minLength": 2 } }
-// (string{minLength})[]
-{ "$type": "array", "of": { "$node": "Type:email@v1", "minLength": 2 } }
-// { foo?: string | undefined }
-{ "$type": "object", "of": { "foo": { "$type": "string" } } }
-// { foo: string }
-{ "$type": "object", "of": { "foo": { "$type": "string", required: true } } }
-// { foo?: string{minLength} | undefined }
-{ "$type": "object", "of": { "foo": { "$node": "Type:email@v1" } } }
-// string | number
-{ "$type": "union", "of": [ { "$type": "string" }, { "$type": "number" } ] }
-```
+> Relies on [`Typed`](#typed) Objects.
 
 ```jsonc
 [
   {
-    "$id": "object:Address:n4ky3lr0m0",
+    "$id": "aaa",
+    "$type": "Webhook",
+    "endpoint": "hello",
+  },
+  {
+    "$id": "bbb",
+    // "url" computed property on runtime interface
+    // -> e.g. Webhook.url() => "https://mysite.com/webhooks/hello"
+    "url": { "$node": "aaa", "$path": "$.url" }
+  }
+]
+```
+
+## **Typed**
+
+- Different Objects often represent different types of domain-specific entities.
+- These types can be assigned with the `"$type"` property.
+- Any Object that has a `"$type"` property is considered Typed.
+
+```jsonc
+{ "$type": "User", ... }
+{ "$type": "Blog", ... }
+{ "$type": "Post", ... }
+```
+
+### Data Types
+
+- If you want validate all Typeds you can express data structures with type
+  built-ins which may also be composed as Nodes.
+
+```jsonc
+// string
+{ "$type": "string" }
+
+// number
+{ "$type": "number" }
+
+// boolean
+{ "$type": "boolean" }
+
+// (string)[]
+{
+  "$type": "array",
+  "of": { "$type": "string" }
+}
+
+// { foo: string }
+{
+  "$type": "object",
+  "of": { "foo": { "$type": "string" } }
+}
+
+// { foo?: string | undefined }
+{
+  "$type": "object",
+  "of": { "foo": { "$type": "string", required: false } }
+}
+
+// string | number
+{
+  "$type": "union",
+  "of": [{ "$type": "string" }, { "$type": "number" }]
+}
+```
+
+### Composing Data Types
+
+- Because data types also exist in the graph, they can:
+  - be Nodes,
+  - be Referenced by other Nodes,
+  - reference other Nodes (to represent complex data structures),
+  - function as aliases to decorate otherwise plain primitive types.
+
+#### Composing Complex Objects
+
+```jsonc
+[
+  {
+    "$id": "object:Address",
     "$type": "object",
     "of": { /* ... */ }
   },
   {
     "$type": "object",
     "of": {
-      "address": { "$node": "object:Address:n4ky3lr0m0" }
+      // reuse object shape
+      "address": { "$node": "object:Address" }
     }
   }
 ]
 ```
 
-You can also alias primitives to make standard types more informative, instead
-of using primitives plainly.
+#### Aliasing Primitives
 
 ```jsonc
 [
   {
-    "$id": "string:FieldTag:j50j1s1f6y",
+    "$id": "string:Tag",
     "$type": "string"
   },
   {
     "$type": "object",
     "of": {
       "name": { "$type": "string" },
-      "fields": { "$type": "array", of: { "$node": "string:FieldTag:j50j1s1f6y" } }
+
+      "items": {
+        "$type": "array",
+        // add meaning
+        of: { "$node": "string:Tag" }
+      }
     }
   }
 ]

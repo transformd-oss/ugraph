@@ -1,20 +1,20 @@
 import { Result } from "esresult";
 import { z, ZodTypeAny } from "zod";
-import { Instance } from "./graph";
+import { TypedObj } from "./graph";
 
 export function toTypeSchema(
-  inst: Instance
+  tobj: TypedObj
 ): Result<
   ZodTypeAny,
   | Result.Err<"PROPS">
   | Result.Err<"SCHEMA">
   | Result.Err<"UNSUPPORTED", { type: string }>
 > {
-  const type = inst.$type;
+  const type = tobj.$type;
   const typeDefinition = types[type];
   if (!typeDefinition) return Result.err("UNSUPPORTED").$info({ type });
 
-  const $props = typeDefinition.schema.safeParse(inst);
+  const $props = typeDefinition.schema.safeParse(tobj);
   if (!$props.success) return Result.err("PROPS").$cause($props.error);
 
   const props = $props.data;
@@ -30,18 +30,17 @@ export function toTypeSchema(
 
 /////////////////////////////
 
-const node = z.object({
-  $id: z.string().optional(),
+const tobj = z.object({
   $type: z.string(),
 });
 
 const types: Record<string, Type> = {
-  string: type(node, () => z.string()),
-  number: type(node, () => z.number()),
-  boolean: type(node, () => z.boolean()),
+  string: type(tobj, () => z.string()),
+  number: type(tobj, () => z.number()),
+  boolean: type(tobj, () => z.boolean()),
   array: type(
-    node.extend({
-      of: node.passthrough(),
+    tobj.extend({
+      of: tobj.passthrough(),
     }),
     ({ of: _of }) => {
       const $ofSchema = toTypeSchema(_of);
@@ -52,9 +51,9 @@ const types: Record<string, Type> = {
     }
   ),
   object: type(
-    node.extend({
+    tobj.extend({
       of: z.record(
-        node.extend({ required: z.boolean().optional() }).passthrough()
+        tobj.extend({ required: z.boolean().optional() }).passthrough()
       ),
     }),
     ({ of: _of }) => {
@@ -73,12 +72,12 @@ const types: Record<string, Type> = {
     }
   ),
   node: type(
-    node.extend({
+    tobj.extend({
       of: z.object({ $id: z.string() }).passthrough(),
     }),
     ({ of: _of }) => {
       const type = _of.$id;
-      return Result.ok(node.extend({ $type: z.literal(type) }));
+      return Result.ok(tobj.extend({ $type: z.literal(type) }));
     }
   ),
 };

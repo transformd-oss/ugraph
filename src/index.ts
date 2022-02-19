@@ -1,3 +1,3 @@
 export * from "./graph";
 export * from "./resolve";
-export * from "./parse";
+export * from "./validate";

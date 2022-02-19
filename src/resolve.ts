@@ -1,5 +1,5 @@
 import { Result } from "esresult";
-import { Graph, Node, Obj } from "./graph";
+import { Graph, Node, Obj, isNode } from "./graph";
 
 type Error =
   | Result.Err<"NODE", { id: string; obj: Obj; path: string[] }>
@@ -110,23 +110,6 @@ export interface Reference {
   $node: string | Node;
 }
 
-interface Placeholder {
-  $placeholder: {
-    id: string;
-    path: string[];
-  };
-}
-
-/////////////////////////////
-
-export function isNode($: unknown): $ is Node {
-  if (!$) return false;
-  if (!(typeof $ === "object")) return false;
-  const id = ($ as Node).$id;
-  if (!(typeof id === "string")) return false;
-  return true;
-}
-
 export function isReference($: unknown): $ is Reference {
   if (!$) return false;
   if (!(typeof $ === "object")) return false;
@@ -139,6 +122,15 @@ export function isReference($: unknown): $ is Reference {
   )
     return false;
   return true;
+}
+
+/////////////////////////////
+
+interface Placeholder {
+  $placeholder: {
+    id: string;
+    path: string[];
+  };
 }
 
 function isPlaceholder($: unknown): $ is Placeholder {

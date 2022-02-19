@@ -1,20 +1,20 @@
 import { Result } from "esresult";
 import { z, ZodTypeAny } from "zod";
-import { TypedObj } from "./graph";
+import { Typed } from "./graph";
 
 export function toTypeSchema(
-  tobj: TypedObj
+  typed: Typed
 ): Result<
   ZodTypeAny,
   | Result.Err<"PROPS">
   | Result.Err<"SCHEMA">
   | Result.Err<"UNSUPPORTED", { type: string }>
 > {
-  const type = tobj.$type;
+  const type = typed.$type;
   const typeDefinition = types[type];
   if (!typeDefinition) return Result.err("UNSUPPORTED").$info({ type });
 
-  const $props = typeDefinition.schema.safeParse(tobj);
+  const $props = typeDefinition.schema.safeParse(typed);
   if (!$props.success) return Result.err("PROPS").$cause($props.error);
 
   const props = $props.data;

@@ -1,3 +1,7 @@
+import { z } from "zod";
+
+/////////////////////////////
+
 export interface Graph {
   data: unknown;
   nodes: Map<string, Node>;
@@ -5,38 +9,32 @@ export interface Graph {
 
 /////////////////////////////
 
-export type Node<
-  PROPS extends Record<string, unknown> = Record<string, unknown>
-> = { $id: string } & PROPS;
-
-export function isNode($: unknown): $ is Node {
-  if (!$) return false;
-  if (!(typeof $ === "object")) return false;
-  const id = ($ as Node).$id;
-  if (!(typeof id === "string")) return false;
-  return true;
-}
-
-/////////////////////////////
-
-export type TypedNode<
-  TYPE extends string = string,
-  PROPS extends Obj = Obj
-> = Node<PROPS> & { $type: TYPE };
-
-export function isTypedNode($: unknown): $ is TypedNode {
-  if (!isNode($)) return false;
-  const type = ($ as TypedNode).$type;
-  if (!(typeof type === "string")) return false;
-  return true;
-}
-
-/////////////////////////////
-
 export type Obj = Record<string, unknown>;
 
+export const Obj = z.object({}).passthrough();
+
+export function isObj(source: unknown): source is Obj {
+  return Obj.safeParse(source).success;
+}
+
 /////////////////////////////
 
-export type TypedObj<TYPE extends string = string> = Obj & {
+export type Node<PROPS extends Obj = Obj> = { $id: string } & PROPS;
+
+export const Node = Obj.extend({ $id: z.string() });
+
+export function isNode(source: unknown): source is Node {
+  return Node.safeParse(source).success;
+}
+
+/////////////////////////////
+
+export type Typed<TYPE extends string = string, PROPS extends Obj = Obj> = {
   $type: TYPE;
-};
+} & PROPS;
+
+export const Typed = Obj.extend({ $type: z.string() });
+
+export function isTyped(source: unknown): source is Typed {
+  return Typed.safeParse(source).success;
+}

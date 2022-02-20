@@ -3,9 +3,12 @@
   "version": "0.0.0",
   "description": "Parser for uGraph JSON data.",
   "private": false,
-  "repository": "github:ptboyer/ugraph",
-  "author": "Peter Boyer <ugraph@peterboyer.me> (https://github.com/ptboyer)",
-  "license": "MIT",
+  "repository": "github:transformd-org/ugraph",
+  "author": "Transformd Pty Ltd (https://transformd.com/)",
+  "contributors": [
+    "Peter Boyer (https://github.com/ptboyer)"
+  ],
+  "license": "Apache-2.0",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {

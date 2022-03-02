@@ -25,6 +25,12 @@ export type { TypeUnion as Union };
 type TypeRecord = { $type: "record"; of: TypeSchema };
 export type { TypeRecord as Record };
 
+type TypeNode = {
+  $type: "node";
+  of: TypeSchema | { $node: string | TypeSchema };
+};
+export type { TypeNode as Node };
+
 type TypeSchema =
   | TypeString
   | TypeNumber
@@ -32,7 +38,8 @@ type TypeSchema =
   | TypeObject
   | TypeArray
   | TypeUnion
-  | TypeRecord;
+  | TypeRecord
+  | TypeNode;
 export type { TypeSchema as Schema };
 
 /**
@@ -41,7 +48,10 @@ export type { TypeSchema as Schema };
 type XRequired<T, K extends keyof T> = Required<Pick<T, K>> &
   Partial<Omit<T, K>>;
 
-type TypeInfer<T> = T extends TypeString
+type TypeInfer<
+  T,
+  NODEOF_MAP extends Record<string, unknown> = Record<string, never>
+> = T extends TypeString
   ? string
   : T extends TypeNumber
   ? number
@@ -68,5 +78,16 @@ type TypeInfer<T> = T extends TypeString
   ? TypeInfer<T["of"][number]>
   : T extends TypeRecord
   ? Record<string, TypeInfer<T["of"]>>
+  : T extends TypeNode
+  ? "$node" extends keyof T["of"]
+    ? T["of"]["$node"] extends string
+      ? Get<T["of"]["$node"], NODEOF_MAP>
+      : TypeInfer<T["of"]["$node"]>
+    : TypeInfer<T["of"]>
   : never;
 export type { TypeInfer as Infer };
+
+/**
+ * Get's value of key `K` from `object` O.
+ */
+type Get<K, O> = K extends keyof O ? O[K] : never;

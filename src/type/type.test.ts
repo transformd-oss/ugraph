@@ -215,3 +215,60 @@ test("types", () => {
   // @ts-expect-error Must match shape.
   expectType<Type.Infer<typeof $>>(null);
 }
+
+/**
+ * NODE
+ */
+
+{
+  type Map = { MyNode: MyNode };
+  type MyNode = { foo: string; bar: number };
+  // As Reference.
+  const $ = { $type: "node", of: { $node: "MyNode" } } as const;
+
+  expectType<Type.Infer<typeof $, Map>>({} as MyNode);
+  expectType<Type.Infer<typeof $, Map>>({ foo: "abc", bar: 123 });
+  // @ts-expect-error Must be of type MyNode.
+  expectType<Type.Infer<typeof $>>(null);
+}
+{
+  type MyNode = { foo: string; bar: number };
+  // As Inline Def/Ref.
+  const $ = {
+    $type: "node",
+    of: {
+      $node: {
+        $id: "MyNode",
+        $type: "object",
+        of: {
+          foo: { $type: "string" },
+          bar: { $type: "number" },
+        },
+      },
+    },
+  } as const;
+
+  expectType<Type.Infer<typeof $>>({} as MyNode);
+  expectType<Type.Infer<typeof $>>({ foo: "abc", bar: 123 });
+  // @ts-expect-error Must be of type MyNode.
+  expectType<Type.Infer<typeof $>>(null);
+}
+{
+  type MyNode = { foo: string; bar: number };
+  // As Object.
+  const $ = {
+    $type: "node",
+    of: {
+      $type: "object",
+      of: {
+        foo: { $type: "string" },
+        bar: { $type: "number" },
+      },
+    },
+  } as const;
+
+  expectType<Type.Infer<typeof $>>({} as MyNode);
+  expectType<Type.Infer<typeof $>>({ foo: "abc", bar: 123 });
+  // @ts-expect-error Must be of type MyNode.
+  expectType<Type.Infer<typeof $>>(null);
+}

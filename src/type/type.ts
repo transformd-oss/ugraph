@@ -50,7 +50,7 @@ type XRequired<T, K extends keyof T> = Required<Pick<T, K>> &
 
 type TypeInfer<
   T,
-  NODEOF_MAP extends Record<string, unknown> = Record<string, never>
+  MAP extends Record<string, unknown> = Record<string, never>
 > = T extends TypeString
   ? string
   : T extends TypeNumber
@@ -62,7 +62,7 @@ type TypeInfer<
     ? Record<string, never>
     : XRequired<
         {
-          [K in keyof T["of"]]: TypeInfer<T["of"][K]>;
+          [K in keyof T["of"]]: TypeInfer<T["of"][K], MAP>;
         },
         {
           [K in keyof T["of"]]-?: T["of"][K] extends {
@@ -73,17 +73,17 @@ type TypeInfer<
         }[keyof T["of"]]
       >
   : T extends TypeArray
-  ? TypeInfer<T["of"]>[]
+  ? TypeInfer<T["of"], MAP>[]
   : T extends TypeUnion
-  ? TypeInfer<T["of"][number]>
+  ? TypeInfer<T["of"][number], MAP>
   : T extends TypeRecord
-  ? Record<string, TypeInfer<T["of"]>>
+  ? Record<string, TypeInfer<T["of"], MAP>>
   : T extends TypeNode
   ? "$node" extends keyof T["of"]
     ? T["of"]["$node"] extends string
-      ? Get<T["of"]["$node"], NODEOF_MAP>
-      : TypeInfer<T["of"]["$node"]>
-    : TypeInfer<T["of"]>
+      ? Get<T["of"]["$node"], MAP>
+      : TypeInfer<T["of"]["$node"], MAP>
+    : TypeInfer<T["of"], MAP>
   : never;
 export type { TypeInfer as Infer };
 

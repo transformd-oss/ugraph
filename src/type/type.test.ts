@@ -272,3 +272,25 @@ test("types", () => {
   // @ts-expect-error Must be of type MyNode.
   expectType<Type.Infer<typeof $>>(null);
 }
+{
+  type Collection = {
+    name: string;
+    fields: Field[];
+  };
+  type Field = {
+    name: string;
+  };
+  // With Deep References.
+  const $ = {
+    $id: "Collection",
+    $type: "object",
+    of: {
+      name: { $type: "string" },
+      fields: { $type: "array", of: { $type: "node", of: { $node: "Field" } } },
+    },
+  } as const;
+
+  expectType<Type.Infer<typeof $, { Field: Field }>>({} as Collection);
+  // @ts-expect-error Must be of type MyNode.
+  expectType<Type.Infer<typeof $>>(null);
+}

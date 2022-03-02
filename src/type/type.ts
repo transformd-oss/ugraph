@@ -31,6 +31,11 @@ type TypeNode = {
 };
 export type { TypeNode as Node };
 
+type TypeType = {
+  $type: "type";
+};
+export type { TypeType as Type };
+
 type TypeSchema =
   | TypeString
   | TypeNumber
@@ -39,7 +44,8 @@ type TypeSchema =
   | TypeArray
   | TypeUnion
   | TypeRecord
-  | TypeNode;
+  | TypeNode
+  | TypeType;
 export type { TypeSchema as Schema };
 
 /**
@@ -84,6 +90,8 @@ type TypeInfer<
       ? Get<T["of"]["$node"], MAP>
       : TypeInfer<T["of"]["$node"], MAP>
     : TypeInfer<T["of"], MAP>
+  : T extends TypeType
+  ? TypeSchema
   : never;
 export type { TypeInfer as Infer };
 

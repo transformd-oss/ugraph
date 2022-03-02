@@ -294,3 +294,17 @@ test("types", () => {
   // @ts-expect-error Must be of type MyNode.
   expectType<Type.Infer<typeof $>>(null);
 }
+
+/**
+ * TYPE
+ */
+
+{
+  const $ = { $type: "type" } as const;
+  expectType<Type.Infer<typeof $>>({ $type: "string" });
+  expectType<Type.Infer<typeof $>>({ $type: "object", of: {} });
+  // @ts-expect-error Object definition is missing "of" property.
+  expectType<Type.Infer<typeof $>>({ $type: "object" });
+  // @ts-expect-error Must be string.
+  expectType<Type.Infer<typeof $>>(null);
+}

@@ -1,7 +1,7 @@
 import { Result } from "esresult";
 import { z, ZodTypeAny } from "zod";
 import { Graph, Obj, Node, Typed, isObj, isNode, isTyped } from "../graph";
-import { toTypeSchema, types as typeTypes } from "../to-type-schema";
+import { toTypeSchema, typeDefinitions } from "../to-type-schema";
 
 /////////////////////////////
 
@@ -276,7 +276,7 @@ export type TypesError =
   | Result.Err<"INVALID_PROPS", { id: string; type: Typed }>;
 
 const defaultTypeValidators = new Map<string, TypeValidator>(
-  Object.entries(typeTypes).map(([name, typeType]) => [
+  Object.entries(typeDefinitions).map(([name, typeType]) => [
     name,
     createTypeValidator(typeType.schema),
   ])

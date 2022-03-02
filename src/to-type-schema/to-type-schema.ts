@@ -11,7 +11,7 @@ export function toTypeSchema(
   | Result.Err<"UNSUPPORTED", { type: string }>
 > {
   const type = typed.$type;
-  const typeDefinition = types[type];
+  const typeDefinition = typeDefinitions[type];
   if (!typeDefinition) return Result.err("UNSUPPORTED").$info({ type });
 
   const $props = typeDefinition.schema.safeParse(typed);
@@ -47,7 +47,7 @@ function type<SCHEMA extends ZodTypeAny>(
 
 /////////////////////////////
 
-export const types: Record<string, Type> = {
+export const typeDefinitions: Record<string, Type> = {
   string: type(Typed, () => z.string()),
   number: type(Typed, () => z.number()),
   boolean: type(Typed, () => z.boolean()),
@@ -97,8 +97,8 @@ export const types: Record<string, Type> = {
 
 type ZodTypeAnyUnion = [ZodTypeAny, ZodTypeAny, ...ZodTypeAny[]];
 
-types.type = type(Typed, () => {
+typeDefinitions.type = type(Typed, () => {
   return z.union(
-    Object.values(types).map((type) => type.schema) as ZodTypeAnyUnion
+    Object.values(typeDefinitions).map((type) => type.schema) as ZodTypeAnyUnion
   );
 });

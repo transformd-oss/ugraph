@@ -24,7 +24,6 @@ jobs:
       BUILD_CHANNEL: ${{ env.BUILD_CHANNEL }}
     steps:
       - uses: actions/checkout@v2
-        with: { fetch-depth: 0 }
       - uses: bahmutov/npm-install@v1
       - run: yarn install --frozen-lockfile
 
@@ -61,6 +60,7 @@ jobs:
       PUBLISH_CHANNEL: ${{ needs.build.outputs.BUILD_CHANNEL == '' && 'latest' || needs.build.outputs.BUILD_CHANNEL }}
     steps:
       - uses: actions/checkout@v2
+        with: { fetch-depth: 0 }
       - uses: bahmutov/npm-install@v1
       - run: yarn install --frozen-lockfile
 

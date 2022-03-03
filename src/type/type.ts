@@ -28,6 +28,7 @@ export type { TypeRecord as Record };
 type TypeNode = {
   $type: "node";
   of: TypeSchema | { $node: string | TypeSchema };
+  with?: TypeObject["of"];
 };
 export type { TypeNode as Node };
 
@@ -54,6 +55,22 @@ export type { TypeSchema as Schema };
 type XRequired<T, K extends keyof T> = Required<Pick<T, K>> &
   Partial<Omit<T, K>>;
 
+type FromTypeObjectOf<
+  OF extends Record<string, unknown>,
+  MAP extends Record<string, unknown>
+> = XRequired<
+  {
+    [K in keyof OF]: TypeInfer<OF[K], MAP>;
+  },
+  {
+    [K in keyof OF]-?: OF[K] extends {
+      required: false;
+    }
+      ? never
+      : K;
+  }[keyof OF]
+>;
+
 type TypeInfer<
   T,
   MAP extends Record<string, unknown> = Record<string, never>
@@ -66,18 +83,7 @@ type TypeInfer<
   : T extends TypeObject
   ? T["of"] extends Record<string, never>
     ? Record<string, never>
-    : XRequired<
-        {
-          [K in keyof T["of"]]: TypeInfer<T["of"][K], MAP>;
-        },
-        {
-          [K in keyof T["of"]]-?: T["of"][K] extends {
-            required: false;
-          }
-            ? never
-            : K;
-        }[keyof T["of"]]
-      >
+    : FromTypeObjectOf<T["of"], MAP>
   : T extends TypeArray
   ? TypeInfer<T["of"], MAP>[]
   : T extends TypeUnion
@@ -85,11 +91,14 @@ type TypeInfer<
   : T extends TypeRecord
   ? Record<string, TypeInfer<T["of"], MAP>>
   : T extends TypeNode
-  ? "$node" extends keyof T["of"]
-    ? T["of"]["$node"] extends string
-      ? Get<T["of"]["$node"], MAP>
-      : TypeInfer<T["of"]["$node"], MAP>
-    : TypeInfer<T["of"], MAP>
+  ? ("$node" extends keyof T["of"]
+      ? T["of"]["$node"] extends string
+        ? Get<T["of"]["$node"], MAP>
+        : TypeInfer<T["of"]["$node"], MAP>
+      : TypeInfer<T["of"], MAP>) &
+      (T["with"] extends undefined
+        ? Record<string, never>
+        : FromTypeObjectOf<NonNullable<T["with"]>, MAP>)
   : T extends TypeType
   ? TypeSchema
   : never;

@@ -275,7 +275,7 @@ test("types", () => {
 {
   type Collection = {
     name: string;
-    fields: Field[];
+    fields: (Field & { alias: string })[];
   };
   type Field = {
     name: string;
@@ -286,11 +286,19 @@ test("types", () => {
     $type: "object",
     of: {
       name: { $type: "string" },
-      fields: { $type: "array", of: { $type: "node", of: { $node: "Field" } } },
+      fields: {
+        $type: "array",
+        of: {
+          $type: "node",
+          of: { $node: "Field" },
+          with: { alias: { $type: "string" } },
+        },
+      },
     },
   } as const;
 
   expectType<Type.Infer<typeof $, { Field: Field }>>({} as Collection);
+  expectType<Collection>({} as Type.Infer<typeof $, { Field: Field }>);
   // @ts-expect-error Must be of type MyNode.
   expectType<Type.Infer<typeof $>>(null);
 }

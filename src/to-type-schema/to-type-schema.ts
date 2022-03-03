@@ -47,6 +47,27 @@ function type<SCHEMA extends ZodTypeAny>(
 
 /////////////////////////////
 
+const objectOf = z.record(
+  Typed.extend({ required: z.boolean().optional() }).passthrough()
+);
+
+function fromObjectOf(
+  _of: z.infer<typeof objectOf>
+): Result<z.AnyZodObject, "KEY_VALUE"> {
+  let schema = z.object({});
+  for (const key in _of) {
+    const value = _of[key];
+    const $valueSchema = toTypeSchema(value);
+    if (!$valueSchema.ok)
+      return Result.err("KEY_VALUE").$cause($valueSchema).$info({ key });
+    let valueSchema = $valueSchema.value;
+    const { required = true } = value;
+    if (!required) valueSchema = valueSchema.optional();
+    schema = schema.extend({ [key]: valueSchema });
+  }
+  return Result.ok(schema);
+}
+
 export const typeDefinitions: Record<string, Type> = {
   string: type(Typed, () => z.string()),
   number: type(Typed, () => z.number()),
@@ -65,32 +86,25 @@ export const typeDefinitions: Record<string, Type> = {
   ),
   object: type(
     Typed.extend({
-      of: z.record(
-        Typed.extend({ required: z.boolean().optional() }).passthrough()
-      ),
+      of: objectOf,
     }),
-    ({ of: _of }) => {
-      let schema = z.object({});
-      for (const key in _of) {
-        const value = _of[key];
-        const $valueSchema = toTypeSchema(value);
-        if (!$valueSchema.ok)
-          return Result.err("OF").$cause($valueSchema).$info({ key });
-        let valueSchema = $valueSchema.value;
-        const { required = true } = value;
-        if (!required) valueSchema = valueSchema.optional();
-        schema = schema.extend({ [key]: valueSchema });
-      }
-      return Result.ok(schema);
-    }
+    ({ of: _of }) => fromObjectOf(_of)
   ),
   node: type(
     Typed.extend({
       of: z.object({ $id: z.string() }).passthrough(),
+      with: objectOf.optional(),
     }),
-    ({ of: _of }) => {
+    ({ of: _of, with: _with }) => {
       const type = _of.$id;
-      return Typed.extend({ $type: z.literal(type) });
+      const schema = Typed.extend({ $type: z.literal(type) });
+      if (_with) {
+        const $withSchema = fromObjectOf(_with);
+        if (!$withSchema.ok) return Result.err("WITH").$cause($withSchema);
+        const withSchema = $withSchema.value;
+        return Result.ok(schema.merge(withSchema));
+      }
+      return Result.ok(schema);
     }
   ),
 };

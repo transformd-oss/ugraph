@@ -77,6 +77,21 @@ test("with node", () => {
   expect(schema.safeParse({ $type: "B" }).success).toBeFalsy();
 });
 
+test("with node with reference properties", () => {
+  const $schema = toTypeSchema({
+    $type: "node",
+    of: { $id: "A" },
+    with: { name: { $type: "string" } },
+  });
+  expect($schema.ok).toBeTruthy();
+  if (!$schema.ok) return;
+
+  const schema = $schema.value;
+  expect(schema.safeParse({ $type: "A" }).success).toBeFalsy();
+  expect(schema.safeParse({ $type: "A", name: "foobar" }).success).toBeTruthy();
+  expect(schema.safeParse({ $type: "A", name: 123 }).success).toBeFalsy();
+});
+
 test("with node and invalid props", () => {
   const $schema = toTypeSchema({ $type: "node", of: "A" });
   expect($schema.ok).toBeFalsy();

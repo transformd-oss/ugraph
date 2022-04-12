@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: "Deploy? (y/N)"
+        description: "Deploy? (y/sha/N)"
         required: false
 
 jobs:

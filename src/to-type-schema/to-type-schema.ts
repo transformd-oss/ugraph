@@ -2,6 +2,9 @@ import { Result } from "esresult";
 import { z, ZodTypeAny } from "zod";
 import { Typed } from "../graph";
 
+/**
+ * @deprecated Use toZodSchema instead if possible.
+ */
 export function toTypeSchema(
   typed: Typed
 ): Result<

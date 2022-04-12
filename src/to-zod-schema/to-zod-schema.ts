@@ -1,16 +1,18 @@
+/* eslint-disable @typescript-eslint/no-namespace */
+
 import { Result } from "esresult";
 import { z, type ZodError, type ZodTypeAny } from "zod";
 
 ////////////////////////////////////////////////////////////////////////////////
 
-export function toZodSchema(options: {
-  types: Types | ReadonlyArray<Types>;
+export function _(options: {
+  types: _.Types | ReadonlyArray<_.Types>;
   useDefaultTypes?: boolean;
-}): Result<Walk> {
+}): Result<_.Walk> {
   const { types: _types, useDefaultTypes = true } = options;
-  const { defaultTypes } = toZodSchema;
+  const { defaultTypes } = _;
 
-  const typesets: ReadonlyArray<Record<string, Array<Type>>> = [
+  const typesets: ReadonlyArray<Record<string, Array<_.Type>>> = [
     ...(useDefaultTypes ? [defaultTypes] : []),
     ...(Array.isArray(_types) ? _types : [_types]),
   ];
@@ -25,7 +27,7 @@ export function toZodSchema(options: {
       }
     }
     return acc;
-  }, {}) as Types;
+  }, {}) as _.Types;
 
   return Result.ok(function walk(options) {
     const { schema } = options;
@@ -69,28 +71,42 @@ export function toZodSchema(options: {
   });
 }
 
+export namespace _ {
+  export interface Type {
+    props: Type.Props;
+    build: Type.Build;
+    partial: boolean;
+  }
+
+  export namespace Type {
+    export type Props = ZodTypeAny | undefined;
+    export type Build<PROPS = ZodTypeAny | undefined> = (
+      props: PROPS extends ZodTypeAny ? z.infer<PROPS> : undefined,
+      context: { walk: Walk }
+    ) => Result<ZodTypeAny | undefined>;
+  }
+
+  export type Schema = { $type: string } & Record<string, unknown>;
+
+  export type Types = Record<string, ReadonlyArray<Type>>;
+
+  export type Walk = <SCHEMA extends Schema>(options: {
+    schema: SCHEMA;
+  }) => Result<
+    ZodTypeAny,
+    | Result.Err<"TypeUnsupported", { type: string }>
+    | Result.Err<"TypePropsInvalid", { issues: ZodError["issues"] }>
+    | Result.Err<"TypeSchemaFailed">
+  >;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
-export interface Type {
-  props: Type.Props;
-  build: Type.Build;
-  partial: boolean;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-namespace
-export namespace Type {
-  export type Props = ZodTypeAny | undefined;
-  export type Build<PROPS = ZodTypeAny | undefined> = (
-    props: PROPS extends ZodTypeAny ? z.infer<PROPS> : undefined,
-    context: { walk: Walk }
-  ) => Result<ZodTypeAny | undefined>;
-}
-
-function Type<PROPS extends Type.Props>(
+function Type<PROPS extends _.Type.Props>(
   props: PROPS,
-  build: Type.Build<PROPS>,
+  build: _.Type.Build<PROPS>,
   options?: { partial?: boolean }
-): Type {
+): _.Type {
   return {
     props,
     build,
@@ -98,41 +114,17 @@ function Type<PROPS extends Type.Props>(
   };
 }
 
-toZodSchema.Type = Type;
+_.Type = Type;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-export type Schema = { $type: string } & Record<string, unknown>;
+const Schema = z.object({ $type: z.string() }).passthrough();
 
-export const Schema = z.object({ $type: z.string() }).passthrough();
-
-toZodSchema.Schema = Schema;
+_.Schema = Schema;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-export type Types = Record<string, ReadonlyArray<Type>>;
-
-////////////////////////////////////////////////////////////////////////////////
-
-export type Walk = <SCHEMA extends Schema>(options: {
-  /**
-   *
-   */
-  schema: SCHEMA;
-  /**
-   *
-   */
-  path?: ReadonlyArray<string>;
-}) => Result<
-  ZodTypeAny,
-  | Result.Err<"TypeUnsupported", { type: string }>
-  | Result.Err<"TypePropsInvalid", { issues: ZodError["issues"] }>
-  | Result.Err<"TypeSchemaFailed">
->;
-
-////////////////////////////////////////////////////////////////////////////////
-
-function walkArray(walk: Walk, of: Schema): Result<ZodTypeAny> {
+function walkArray(walk: _.Walk, of: _.Schema): Result<ZodTypeAny> {
   const $ofschema = walk({ schema: of });
   if (!$ofschema.ok) return Result.err("OF").$cause($ofschema);
   const ofschema = $ofschema.value;
@@ -141,8 +133,8 @@ function walkArray(walk: Walk, of: Schema): Result<ZodTypeAny> {
 }
 
 function walkObject(
-  walk: Walk,
-  of: Record<string, Schema>
+  walk: _.Walk,
+  of: Record<string, _.Schema>
 ): Result<ZodTypeAny> {
   let schema = z.object({});
   for (const key in of) {
@@ -167,7 +159,7 @@ function walkObject(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-const defaultTypes: Types = {
+const defaultTypes: _.Types = {
   string: [Type(undefined, () => Result.ok(z.string()))],
   number: [Type(undefined, () => Result.ok(z.number()))],
   boolean: [Type(undefined, () => Result.ok(z.boolean()))],
@@ -209,4 +201,4 @@ const defaultTypes: Types = {
   // ],
 };
 
-toZodSchema.defaultTypes = defaultTypes;
+_.defaultTypes = defaultTypes;

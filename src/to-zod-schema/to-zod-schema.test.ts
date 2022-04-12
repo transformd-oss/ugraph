@@ -1,6 +1,6 @@
 import { Result } from "esresult";
 import { z } from "zod";
-import { toZodSchema } from "./to-zod-schema";
+import { toZodSchema } from "./index";
 
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -401,3 +401,24 @@ test("with type definition invalid data properties", () => {
     },
   });
 });
+
+test("should call over all nodes and types", () => {
+  const onNode = jest.fn();
+  const onTyped = jest.fn();
+
+  parse({
+    data: [
+      { $id: "a" },
+      { $id: "b" },
+      { $id: "c" },
+      { $id: "x", relationship: { $node: { $id: "xa", $type: "A" } } },
+    ],
+    onNode,
+    onTyped,
+  });
+
+  expect(onNode).toHaveBeenCalledTimes(5);
+  expect(onNode).toHaveBeenNthCalledWith(1, "a", { $id: "a" });
+  expect(onTyped).toHaveBeenCalledTimes(1);
+  expect(onTyped).toHaveBeenNthCalledWith(1, "A", { $id: "xa", $type: "A" });
+});

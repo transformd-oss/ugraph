@@ -15,11 +15,7 @@ import { toTypeSchema, typeDefinitions } from "../to-type-schema";
  * which will be automatically parsed for it's Nodes. Type-definition Nodes use
  * it's `$id` property to determine which `$type` name to validate on a Object.
  */
-export function parse({
-  data,
-  types,
-  onConflict = "abort",
-}: {
+export function parse(options: {
   /**
    * Data to walk and extract nodes from.
    */
@@ -38,11 +34,38 @@ export function parse({
    * - "ignore", skips conflicts (only first instance is used).
    */
   onConflict?: "abort" | "merge" | "ignore";
+  /**
+   * Optional callback fired once per-every complete Node object, with $id.
+   */
+  onNode?: (id: string, node: Node) => void;
+  /**
+   * Optional callback fired once per-every complete Typed object, with $type.
+   */
+  onTyped?: (type: string, typed: Typed) => void;
 }): Result<
   Result.Ok<Graph>,
   | Result.Err<"DATA_INVALID", { errors: DataError[] }>
   | Result.Err<"TYPES_INVALID", { errors: TypesError[] }>
 > {
+  const { types } = options;
+  const $typeValidators = resolveTypeValidators(types);
+  if (!$typeValidators.ok)
+    return Result.err("TYPES_INVALID")
+      .$cause($typeValidators)
+      .$info($typeValidators.info);
+
+  const typeValidators = $typeValidators.value;
+
+  type NodeId = string;
+  const nodes = new Map<NodeId, Node>();
+  const typeds = new Map<Typed, { paths: string[][] }>();
+  const pendings = new Map<Pending, { paths: string[][] }>();
+  const errors = new Set<DataError>();
+
+  /////////////////////////////
+
+  const { onConflict = "abort" } = options;
+
   /**
    * Return recursively resolved values from Obj/Node/Reference definitions.
    */
@@ -158,7 +181,7 @@ export function parse({
   /**
    * Parse and validate given Typed object.
    */
-  function parseTyped(typed: Typed, paths: string[][]): void {
+  function parseTyped(typed: Typed, paths: string[][]): boolean {
     const type = typed.$type;
     const validator = typeValidators.get(type);
     if (!validator) {
@@ -167,7 +190,7 @@ export function parse({
           Result.err("TYPED_INVALID_TYPE").$info({ path, typed, type })
         )
       );
-      return;
+      return false;
     }
 
     const issues = validator(typed);
@@ -177,8 +200,10 @@ export function parse({
           Result.err("TYPED_INVALID_PROPS").$info({ path, typed, issues })
         )
       );
-      return;
+      return false;
     }
+
+    return true;
   }
 
   /**
@@ -193,31 +218,31 @@ export function parse({
   }
 
   /////////////////////////////
-
-  const $typeValidators = resolveTypeValidators(types);
-  if (!$typeValidators.ok)
-    return Result.err("TYPES_INVALID")
-      .$cause($typeValidators)
-      .$info($typeValidators.info);
-
-  const typeValidators = $typeValidators.value;
-
-  type NodeId = string;
-  const nodes = new Map<NodeId, Node>();
-  const typeds = new Map<Typed, { paths: string[][] }>();
-  const pendings = new Map<Pending, { paths: string[][] }>();
-  const errors = new Set<DataError>();
-
+  const { data } = options;
   const graph: Graph = { data: walk(data), nodes };
-  if (types) typeds.forEach(({ paths }, typed) => parseTyped(typed, paths));
+
+  const { onNode } = options;
+  if (onNode) {
+    nodes.forEach((node, id) => onNode(id, node));
+  }
+
   pendings.forEach(({ paths }, pending) => parsePending(pending, paths));
 
-  if (errors.size)
+  const { onTyped } = options;
+  typeds.forEach(({ paths }, typed) => {
+    if (types) {
+      parseTyped(typed, paths);
+    }
+    if (onTyped) {
+      onTyped(typed.$type, typed);
+    }
+  });
+
+  if (errors.size) {
     return Result.err("DATA_INVALID").$info({
       errors: Array.from(errors.values()),
     });
-
-  /////////////////////////////
+  }
 
   return Result.ok(graph);
 }

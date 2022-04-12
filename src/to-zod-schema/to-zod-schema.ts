@@ -73,8 +73,8 @@ export function _(options: {
 
 export namespace _ {
   export interface Type {
-    props: Type.Props;
-    build: Type.Build;
+    props: _.Type.Props;
+    build: _.Type.Build;
     partial: boolean;
   }
 
@@ -88,9 +88,9 @@ export namespace _ {
 
   export type Schema = { $type: string } & Record<string, unknown>;
 
-  export type Types = Record<string, ReadonlyArray<Type>>;
+  export type Types = Record<string, ReadonlyArray<_.Type>>;
 
-  export type Walk = <SCHEMA extends Schema>(options: {
+  export type Walk = <SCHEMA extends _.Schema>(options: {
     schema: SCHEMA;
   }) => Result<
     ZodTypeAny,

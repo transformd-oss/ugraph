@@ -6,15 +6,15 @@ import { z, type ZodError, type ZodTypeAny } from "zod";
 ////////////////////////////////////////////////////////////////////////////////
 
 export function _(options: {
-  types: _.Types | ReadonlyArray<_.Types>;
+  types?: _.Types | ReadonlyArray<_.Types>;
   useDefaultTypes?: boolean;
-}): Result<_.Walk> {
+}): Result<_.Parse> {
   const { types: _types, useDefaultTypes = true } = options;
   const { defaultTypes } = _;
 
   const typesets: ReadonlyArray<Record<string, Array<_.Type>>> = [
     ...(useDefaultTypes ? [defaultTypes] : []),
-    ...(Array.isArray(_types) ? _types : [_types]),
+    ...(_types ? (Array.isArray(_types) ? _types : [_types]) : []),
   ];
 
   const types = typesets.reduce((acc, typeset) => {
@@ -29,7 +29,7 @@ export function _(options: {
     return acc;
   }, {}) as _.Types;
 
-  return Result.ok(function walk(options) {
+  return Result.ok(function parse(options) {
     const { schema } = options;
 
     const { $type } = schema;
@@ -50,7 +50,7 @@ export function _(options: {
       }
 
       const props = $props?.data as unknown;
-      const $zschema = item.build(props, { walk });
+      const $zschema = item.build(props, { parse });
       if (!$zschema.ok) {
         return Result.err("TypeSchemaFailed").$cause($zschema);
       }
@@ -82,7 +82,7 @@ export namespace _ {
     export type Props = ZodTypeAny | undefined;
     export type Build<PROPS = ZodTypeAny | undefined> = (
       props: PROPS extends ZodTypeAny ? z.infer<PROPS> : undefined,
-      context: { walk: Walk }
+      context: { parse: Parse }
     ) => Result<ZodTypeAny | undefined>;
   }
 
@@ -90,7 +90,7 @@ export namespace _ {
 
   export type Types = Record<string, ReadonlyArray<_.Type>>;
 
-  export type Walk = <SCHEMA extends _.Schema>(options: {
+  export type Parse = <SCHEMA extends _.Schema>(options: {
     schema: SCHEMA;
   }) => Result<
     ZodTypeAny,
@@ -124,22 +124,22 @@ _.Schema = Schema;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function walkArray(walk: _.Walk, of: _.Schema): Result<ZodTypeAny> {
-  const $ofschema = walk({ schema: of });
+function parseArray(parse: _.Parse, of: _.Schema): Result<ZodTypeAny> {
+  const $ofschema = parse({ schema: of });
   if (!$ofschema.ok) return Result.err("OF").$cause($ofschema);
   const ofschema = $ofschema.value;
   const schema = z.array(ofschema);
   return Result.ok(schema);
 }
 
-function walkObject(
-  walk: _.Walk,
+function parseObject(
+  parse: _.Parse,
   of: Record<string, _.Schema>
 ): Result<ZodTypeAny> {
   let schema = z.object({});
   for (const key in of) {
     const keyschema = of[key];
-    const $valueSchema = walk({ schema: keyschema });
+    const $valueSchema = parse({ schema: keyschema });
     if (!$valueSchema.ok) {
       return Result.err("OfKeySchemaFailed")
         .$cause($valueSchema)
@@ -168,7 +168,7 @@ const defaultTypes: _.Types = {
       z.object({
         of: Schema,
       }),
-      ({ of }, { walk }) => walkArray(walk, of)
+      ({ of }, { parse }) => parseArray(parse, of)
     ),
   ],
   object: [
@@ -176,7 +176,7 @@ const defaultTypes: _.Types = {
       z.object({
         of: z.record(Schema),
       }),
-      ({ of }, { walk }) => walkObject(walk, of)
+      ({ of }, { parse }) => parseObject(parse, of)
     ),
   ],
   // TODO: For parsing the schema itself.
@@ -186,7 +186,7 @@ const defaultTypes: _.Types = {
   //       of: z.object({ $id: z.string() }).passthrough(),
   //       edge: objectOf.optional(),
   //     }),
-  //     ({ of, edge }, { walk }) => {
+  //     ({ of, edge }, { parse }) => {
   //       const type = _of.$id;
   //       const schema = Typed.extend({ $type: z.literal(type) });
   //       if (with) {

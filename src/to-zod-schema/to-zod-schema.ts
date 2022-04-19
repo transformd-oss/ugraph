@@ -75,7 +75,6 @@ export namespace _ {
   export interface Type {
     props: _.Type.Props;
     build: _.Type.Build;
-    partial: boolean;
   }
 
   export namespace Type {
@@ -104,13 +103,11 @@ export namespace _ {
 
 function Type<PROPS extends _.Type.Props>(
   props: PROPS,
-  build: _.Type.Build<PROPS>,
-  options?: { partial?: boolean }
+  build: _.Type.Build<PROPS>
 ): _.Type {
   return {
     props,
     build,
-    partial: options?.partial ?? false,
   };
 }
 

@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "esresult": "^2.0.0",
-    "zod": "^3.11.0"
+    "zod": "^3.14.4"
   },
   "devDependencies": {
     "@commitlint/cli": "^16.0.0",

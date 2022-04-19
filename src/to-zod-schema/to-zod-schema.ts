@@ -5,10 +5,12 @@ import { z, type ZodError, type ZodTypeAny } from "zod";
 
 ////////////////////////////////////////////////////////////////////////////////
 
-export function _(options: {
-  types?: _.Types | ReadonlyArray<_.Types>;
-  useDefaultTypes?: boolean;
-}): Result<_.Parse> {
+export function _(
+  options: {
+    types?: _.Types | ReadonlyArray<_.Types>;
+    useDefaultTypes?: boolean;
+  } = {}
+): Result<_.Parse> {
   const { types: _types, useDefaultTypes = true } = options;
   const { defaultTypes } = _;
 
@@ -132,10 +134,17 @@ function parseArray(parse: _.Parse, of: _.Schema): Result<ZodTypeAny> {
 function parseObject(
   parse: _.Parse,
   of: Record<string, _.Schema>
-): Result<ZodTypeAny> {
+): Result<
+  ZodTypeAny,
+  | Result.Err<"OfKeyLookupFailed", { key: string }>
+  | Result.Err<"OfKeySchemaFailed", { key: string }>
+> {
   let schema = z.object({});
   for (const key in of) {
     const keyschema = of[key];
+    if (!keyschema) {
+      return Result.err("OfKeyLookupFailed").$info({ key });
+    }
     const $valueSchema = parse({ schema: keyschema });
     if (!$valueSchema.ok) {
       return Result.err("OfKeySchemaFailed")

@@ -56,10 +56,13 @@ const objectOf = z.record(
 
 function fromObjectOf(
   _of: z.infer<typeof objectOf>
-): Result<z.AnyZodObject, "KEY_VALUE"> {
+): Result<z.AnyZodObject, "KEY_VALUE" | "KEY_LOOKUP"> {
   let schema = z.object({});
   for (const key in _of) {
     const value = _of[key];
+    if (!value) {
+      return Result.err("KEY_LOOKUP").$info({ key });
+    }
     const $valueSchema = toTypeSchema(value);
     if (!$valueSchema.ok)
       return Result.err("KEY_VALUE").$cause($valueSchema).$info({ key });
@@ -114,7 +117,7 @@ export const typeDefinitions: Record<string, Type> = {
 
 type ZodTypeAnyUnion = [ZodTypeAny, ZodTypeAny, ...ZodTypeAny[]];
 
-typeDefinitions.type = type(Typed, () => {
+typeDefinitions["type"] = type(Typed, () => {
   return z.union(
     Object.values(typeDefinitions).map((type) => type.schema) as ZodTypeAnyUnion
   );

@@ -87,7 +87,8 @@ jobs:
           name: docs
           path: docs
 
-      - uses: peaceiris/actions-gh-pages@v3
+      - if: ${{ env.PUBLISH_CHANNEL == 'latest' }}
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs

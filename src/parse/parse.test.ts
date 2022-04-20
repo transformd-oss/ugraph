@@ -3,34 +3,36 @@ import { parse } from "./parse";
 
 test("with only objects", () => {
   const data = [{ a: "1" }, { b: "2" }, { c: "3" }];
-  const u = parse({ data }).orUndefined();
-  expect(u?.data).toHaveLength(3);
-  expect(u?.nodes.size).toBe(0);
-  expect(Array.from(u?.data as typeof data)).toEqual(data);
+  const u = parse({ data }).orThrow();
+  expect(u.data).toHaveLength(3);
+  expect(u.nodes.size).toBe(0);
+  expect(Array.from(u.data as typeof data)).toEqual(data);
 });
 
 test("with some nodes", () => {
   const data = [{ a: "1" }, { $id: "b:2", $type: "B" }];
-  const u = parse({ data }).orUndefined();
-  expect(u?.data).toHaveLength(2);
-  expect(u?.nodes.size).toBe(1);
-  expect(Array.from(u?.data as typeof data)).toEqual(data);
+  const u = parse({ data }).orThrow();
+  expect(u.data).toHaveLength(2);
+  expect(u.nodes.size).toBe(1);
+  expect(Array.from(u.data as typeof data)).toEqual(data);
 });
 
 test("abort on node conflict", () => {
   const data = [{ $id: "a", $type: "A" }, { $id: "a" }];
-  const $u = parse({ data });
-  expect($u.ok).toBeFalsy();
-  if ($u.ok) return;
-  expect($u).toMatchObject({
-    error: "DATA_INVALID",
-    info: {
-      errors: [
-        {
-          error: "NODE_CONFLICT",
-          info: { path: ["1"] },
-        },
-      ],
+  const $ = parse({ data });
+  expect($).toMatchObject({
+    error: {
+      type: "DATA_INVALID",
+      meta: {
+        errors: [
+          {
+            error: {
+              type: "NODE_CONFLICT",
+              meta: { path: ["1"] },
+            },
+          },
+        ],
+      },
     },
   });
 });
@@ -40,9 +42,8 @@ test("merge on node conflict", () => {
     { $id: "a", $type: "A", prop: "foo" },
     { $id: "a", prop: "bar" },
   ];
-  const $u = parse({ data, onConflict: "merge" });
-  expect($u.ok).toBeTruthy();
-  expect($u.value?.nodes.get("a")).toMatchObject({
+  const u = parse({ data, onConflict: "merge" }).orThrow();
+  expect(u.nodes.get("a")).toMatchObject({
     $id: "a",
     $type: "A",
     prop: "bar",
@@ -54,9 +55,8 @@ test("ignore on node conflict", () => {
     { $id: "a", $type: "A", prop: "foo" },
     { $id: "a", prop: "bar" },
   ];
-  const $u = parse({ data, onConflict: "ignore" });
-  expect($u.ok).toBeTruthy();
-  expect($u.value?.nodes.get("a")).toMatchObject({
+  const u = parse({ data, onConflict: "ignore" }).orThrow();
+  expect(u.nodes.get("a")).toMatchObject({
     $id: "a",
     $type: "A",
     prop: "foo",
@@ -77,12 +77,10 @@ test("with some nested nodes", () => {
       },
     },
   ];
-  const $u = parse({ data });
-  const u = $u.value;
-  expect($u.ok).toBeTruthy();
-  expect(u?.data).toHaveLength(1);
-  expect(u?.nodes.size).toBe(3);
-  expect(u?.data).toMatchObject([
+  const u = parse({ data }).orThrow();
+  expect(u.data).toHaveLength(1);
+  expect(u.nodes.size).toBe(3);
+  expect(u.data).toMatchObject([
     {
       $id: "a:1",
       $type: "A",
@@ -112,15 +110,13 @@ test("with many references to one node", () => {
       a: { $node: "a:1" },
     },
   ];
-  const $u = parse({ data });
-  const u = $u.value;
-  expect($u.ok).toBeTruthy();
-  expect(u?.data).toHaveLength(3);
-  expect(u?.nodes.size).toBe(3);
-  const a = u?.nodes.get("a:1");
+  const u = parse({ data }).orThrow();
+  expect(u.data).toHaveLength(3);
+  expect(u.nodes.size).toBe(3);
+  const a = u.nodes.get("a:1");
   expect(a).toBeDefined();
-  expect(u?.nodes.get("b:2")?.["a"]).not.toStrictEqual(a);
-  expect((u?.nodes.get("b:2")?.["a"] as Obj)["$node"]).toStrictEqual(a);
+  expect(u.nodes.get("b:2")?.["a"]).not.toStrictEqual(a);
+  expect((u.nodes.get("b:2")?.["a"] as Obj)["$node"]).toStrictEqual(a);
 });
 
 test("with references on a simple object", () => {
@@ -134,12 +130,9 @@ test("with references on a simple object", () => {
       foo: "bar",
     },
   ];
-  const $u = parse({ data });
-  expect($u.ok).toBeTruthy();
-  if (!$u.ok) return;
-
-  expect(($u.value.data as typeof data)[0]).toMatchObject({
-    a: $u.value.nodes.get("a:1"),
+  const u = parse({ data }).orThrow();
+  expect((u.data as typeof data)[0]).toMatchObject({
+    a: u.nodes.get("a:1"),
   });
 });
 
@@ -158,13 +151,12 @@ test("with references in nested object data structure", () => {
       of: {},
     },
   ];
-  const $u = parse({ data });
-  expect($u).toMatchObject({ ok: true });
-  expect($u.value?.nodes.get("A")).toMatchObject({
+  const u = parse({ data }).orThrow();
+  expect(u.nodes.get("A")).toMatchObject({
     $id: "A",
     $type: "object",
     of: {
-      prop: { $type: "node", of: $u.value?.nodes.get("B") },
+      prop: { $type: "node", of: u.nodes.get("B") },
     },
   });
 });
@@ -177,18 +169,19 @@ test("with bad references", () => {
       c: { $node: "c:3" },
     },
   ];
-  const $u = parse({ data });
-  expect($u).toMatchObject({
-    ok: false,
-    error: "DATA_INVALID",
-    info: {
-      errors: [{}, {}, {}],
+  const $ = parse({ data });
+  expect($).toMatchObject({
+    error: {
+      type: "DATA_INVALID",
+      meta: {
+        errors: [{}, {}, {}],
+      },
     },
   });
 });
 
 test("with all complete types", () => {
-  const $u = parse({
+  const $ = parse({
     data: [
       {
         $id: "A:a:rlmpnimf6v",
@@ -226,13 +219,11 @@ test("with all complete types", () => {
       },
     ],
   });
-  expect($u).toMatchObject({
-    ok: true,
-  });
+  expect($.error).toBeUndefined();
 });
 
 test("with missing types", () => {
-  const $u = parse({
+  const $ = parse({
     data: [
       {
         $id: "A:a:rlmpnimf6v",
@@ -251,22 +242,25 @@ test("with missing types", () => {
       },
     ],
   });
-  expect($u).toMatchObject({
-    ok: false,
-    error: "DATA_INVALID",
-    info: {
-      errors: [
-        {
-          error: "TYPED_INVALID_TYPE",
-          info: { path: ["1"] },
-        },
-      ],
+  expect($).toMatchObject({
+    error: {
+      type: "DATA_INVALID",
+      meta: {
+        errors: [
+          {
+            error: {
+              type: "TYPED_INVALID_TYPE",
+              meta: { path: ["1"] },
+            },
+          },
+        ],
+      },
     },
   });
 });
 
 test("with incomplete types", () => {
-  const $u = parse({
+  const $ = parse({
     data: [],
     types: [
       {
@@ -275,24 +269,27 @@ test("with incomplete types", () => {
       },
     ],
   });
-  expect($u).toMatchObject({
-    ok: false,
-    error: "TYPES_INVALID",
-    info: {
-      errors: [
-        {
-          error: "INVALID_PROPS",
-          info: {
-            id: "A",
+  expect($).toMatchObject({
+    error: {
+      type: "TYPES_INVALID",
+      meta: {
+        errors: [
+          {
+            error: {
+              type: "INVALID_PROPS",
+              meta: {
+                id: "A",
+              },
+            },
           },
-        },
-      ],
+        ],
+      },
     },
   });
 });
 
 test("with invalid data", () => {
-  const $u = parse({
+  const $ = parse({
     data: [
       { $id: "foo", $type: "Foo" },
       { $id: "bar", $type: "Bar", foo: "foo" },
@@ -310,11 +307,19 @@ test("with invalid data", () => {
       },
     ],
   });
-  expect($u).toMatchObject({
-    ok: false,
-    error: "DATA_INVALID",
-    info: {
-      errors: [{ error: "TYPED_INVALID_PROPS", info: { path: ["1"] } }],
+  expect($).toMatchObject({
+    error: {
+      type: "DATA_INVALID",
+      meta: {
+        errors: [
+          {
+            error: {
+              type: "TYPED_INVALID_PROPS",
+              meta: { path: ["1"] },
+            },
+          },
+        ],
+      },
     },
   });
 });
@@ -350,7 +355,7 @@ const string_Name = {
 };
 
 test("with type definition data properties", () => {
-  const $u = parse({
+  const $ = parse({
     data: [Field_user, object_Address, string_Name],
     types: [
       {
@@ -363,13 +368,11 @@ test("with type definition data properties", () => {
       },
     ],
   });
-  expect($u).toMatchObject({
-    ok: true,
-  });
+  expect($.error).toBeUndefined();
 });
 
 test("with type definition invalid data properties", () => {
-  const $u = parse({
+  const $ = parse({
     data: [
       { ...Field_user, name: { $node: "Name" } }, // should be string
       object_Address,
@@ -386,18 +389,21 @@ test("with type definition invalid data properties", () => {
       },
     ],
   });
-  expect($u).toMatchObject({
-    ok: false,
-    error: "DATA_INVALID",
-    info: {
-      errors: [
-        {
-          error: "TYPED_INVALID_PROPS",
-          info: {
-            issues: [{ path: ["name"] }],
+  expect($).toMatchObject({
+    error: {
+      type: "DATA_INVALID",
+      meta: {
+        errors: [
+          {
+            error: {
+              type: "TYPED_INVALID_PROPS",
+              meta: {
+                issues: [{ path: ["name"] }],
+              },
+            },
           },
-        },
-      ],
+        ],
+      },
     },
   });
 });

@@ -1,4 +1,4 @@
-import { Result } from "esresult";
+import Result from "esresult";
 import { z } from "zod";
 import { toZodSchema } from "./index";
 
@@ -12,9 +12,9 @@ describe("string with format email flag", () => {
           z.object({ format: z.literal("email").optional() }),
           ({ format }) => {
             if (format === "email") {
-              return Result.ok(z.string().email());
+              return Result(z.string().email());
             }
-            return Result.ok(undefined);
+            return Result(undefined);
           }
         ),
       ],
@@ -30,13 +30,10 @@ describe("string with format email flag", () => {
         $type: "string",
         format: "email",
       },
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const zs = $.value!;
-    expect(zs.safeParse("user").success).toBeFalsy();
-    expect(zs.safeParse("user@").success).toBeFalsy();
-    expect(zs.safeParse("user@example.co").success).toBeTruthy();
+    }).orThrow();
+    expect($.safeParse("user").success).toBeFalsy();
+    expect($.safeParse("user@").success).toBeFalsy();
+    expect($.safeParse("user@example.co").success).toBeTruthy();
   });
 
   test("creates array with string + email format", () => {
@@ -45,14 +42,11 @@ describe("string with format email flag", () => {
         $type: "array",
         of: { $type: "string", format: "email" },
       },
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const zs = $.value!;
-    expect(zs.safeParse("user").success).toBeFalsy();
-    expect(zs.safeParse("user@example.co").success).toBeFalsy();
-    expect(zs.safeParse(["user"]).success).toBeFalsy();
-    expect(zs.safeParse(["user@example.co"]).success).toBeTruthy();
+    }).orThrow();
+    expect($.safeParse("user").success).toBeFalsy();
+    expect($.safeParse("user@example.co").success).toBeFalsy();
+    expect($.safeParse(["user"]).success).toBeFalsy();
+    expect($.safeParse(["user@example.co"]).success).toBeTruthy();
   });
 
   test("creates object with string + email format", () => {
@@ -64,13 +58,10 @@ describe("string with format email flag", () => {
           bar: { $type: "string", format: "email", required: false },
         },
       },
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const zs = $.value!;
-    expect(zs.safeParse("user").success).toBeFalsy();
-    expect(zs.safeParse({ bar: "user@example.co" }).success).toBeFalsy();
-    expect(zs.safeParse({ foo: "user@example.co" }).success).toBeTruthy();
+    }).orThrow();
+    expect($.safeParse("user").success).toBeFalsy();
+    expect($.safeParse({ bar: "user@example.co" }).success).toBeFalsy();
+    expect($.safeParse({ foo: "user@example.co" }).success).toBeTruthy();
   });
 
   test("regular string", () => {
@@ -78,12 +69,9 @@ describe("string with format email flag", () => {
       schema: {
         $type: "string",
       },
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const zs = $.value!;
-    expect(zs.safeParse("user").success).toBeTruthy();
-    expect(zs.safeParse("user@").success).toBeTruthy();
-    expect(zs.safeParse("user@example.co").success).toBeTruthy();
+    }).orThrow();
+    expect($.safeParse("user").success).toBeTruthy();
+    expect($.safeParse("user@").success).toBeTruthy();
+    expect($.safeParse("user@example.co").success).toBeTruthy();
   });
 });

@@ -1,4 +1,4 @@
-import { Result } from "esresult";
+import Result from "esresult";
 import { z, ZodTypeAny } from "zod";
 import { Typed } from "../graph";
 
@@ -7,35 +7,36 @@ import { Typed } from "../graph";
  */
 export function toTypeSchema(
   typed: Typed
-): Result<
-  ZodTypeAny,
-  | Result.Err<"PROPS">
-  | Result.Err<"SCHEMA">
-  | Result.Err<"UNSUPPORTED", { type: string }>
-> {
+): Result<ZodTypeAny, "PROPS" | "SCHEMA" | ["UNSUPPORTED", { type: string }]> {
   const type = typed.$type;
   const typeDefinition = typeDefinitions[type];
-  if (!typeDefinition) return Result.err("UNSUPPORTED").$info({ type });
+  if (!typeDefinition) {
+    return Result.error(["UNSUPPORTED", { type }]);
+  }
 
   const $props = typeDefinition.schema.safeParse(typed);
-  if (!$props.success) return Result.err("PROPS").$cause($props.error);
+  if (!$props.success) {
+    return Result.error("PROPS", { cause: $props.error });
+  }
 
   const props = $props.data;
   const $schema = typeDefinition.build(props);
-  if ("ok" in $schema) {
-    if ($schema.ok) return Result.ok($schema.value);
-    return Result.err("SCHEMA").$cause($schema);
+  if ("error" in $schema) {
+    if ($schema.error) {
+      return Result.error("SCHEMA", { cause: $schema });
+    }
+    return Result($schema.value);
   }
 
   const schema = $schema;
-  return Result.ok(schema);
+  return Result(schema);
 }
 
 /////////////////////////////
 
 interface Type<SCHEMA extends ZodTypeAny = ZodTypeAny> {
   schema: SCHEMA;
-  build(props: z.infer<SCHEMA>): ZodTypeAny | Result<ZodTypeAny>;
+  build(props: z.infer<SCHEMA>): ZodTypeAny | Result<ZodTypeAny, unknown>;
 }
 
 function type<SCHEMA extends ZodTypeAny>(
@@ -56,22 +57,22 @@ const objectOf = z.record(
 
 function fromObjectOf(
   _of: z.infer<typeof objectOf>
-): Result<z.AnyZodObject, "KEY_VALUE" | "KEY_LOOKUP"> {
+): Result<z.AnyZodObject, ["KEY_VALUE" | "KEY_LOOKUP", { key: string }]> {
   let schema = z.object({});
   for (const key in _of) {
     const value = _of[key];
     if (!value) {
-      return Result.err("KEY_LOOKUP").$info({ key });
+      return Result.error(["KEY_LOOKUP", { key }]);
     }
     const $valueSchema = toTypeSchema(value);
-    if (!$valueSchema.ok)
-      return Result.err("KEY_VALUE").$cause($valueSchema).$info({ key });
-    let valueSchema = $valueSchema.value;
+    if ($valueSchema.error)
+      return Result.error(["KEY_VALUE", { key }], { cause: $valueSchema });
+    let [valueSchema] = $valueSchema;
     const { required = true } = value;
     if (!required) valueSchema = valueSchema.optional();
     schema = schema.extend({ [key]: valueSchema });
   }
-  return Result.ok(schema);
+  return Result(schema);
 }
 
 export const typeDefinitions: Record<string, Type> = {
@@ -84,10 +85,10 @@ export const typeDefinitions: Record<string, Type> = {
     }),
     ({ of: _of }) => {
       const $ofSchema = toTypeSchema(_of);
-      if (!$ofSchema.ok) return Result.err("OF").$cause($ofSchema);
+      if ($ofSchema.error) return Result.error("OF", { cause: $ofSchema });
       const ofSchema = $ofSchema.value;
       const schema = z.array(ofSchema);
-      return Result.ok(schema);
+      return Result(schema);
     }
   ),
   object: type(
@@ -106,11 +107,12 @@ export const typeDefinitions: Record<string, Type> = {
       const schema = Typed.extend({ $type: z.literal(type) });
       if (_with) {
         const $withSchema = fromObjectOf(_with);
-        if (!$withSchema.ok) return Result.err("WITH").$cause($withSchema);
+        if ($withSchema.error)
+          return Result.error("WITH", { cause: $withSchema });
         const withSchema = $withSchema.value;
-        return Result.ok(schema.merge(withSchema));
+        return Result(schema.merge(withSchema));
       }
-      return Result.ok(schema);
+      return Result(schema);
     }
   ),
 };

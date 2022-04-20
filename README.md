@@ -25,7 +25,7 @@ const data = [
 const $graph = parse({ data });
 
 // handle errors
-if (!$graph.ok) ...
+if ($graph.error) ...
 
 // use valid graph
 const graph = $graph.value

@@ -1,4 +1,4 @@
-import { Result } from "esresult";
+import Result from "esresult";
 import { z, ZodTypeAny } from "zod";
 import { Graph, Obj, Node, Typed, isObj, isNode, isTyped } from "../graph";
 import { toTypeSchema, typeDefinitions } from "../to-type-schema";
@@ -43,16 +43,16 @@ export function parse(options: {
    */
   onTyped?: (type: string, typed: Typed) => void;
 }): Result<
-  Result.Ok<Graph>,
-  | Result.Err<"DATA_INVALID", { errors: DataError[] }>
-  | Result.Err<"TYPES_INVALID", { errors: TypesError[] }>
+  Graph,
+  | ["DATA_INVALID", { errors: DataError[] }]
+  | ["TYPES_INVALID", { errors: TypesError[] }]
 > {
   const { types } = options;
   const $typeValidators = resolveTypeValidators(types);
-  if (!$typeValidators.ok)
-    return Result.err("TYPES_INVALID")
-      .$cause($typeValidators)
-      .$info($typeValidators.info);
+  if ($typeValidators.error)
+    return Result.error(["TYPES_INVALID", $typeValidators.error.meta], {
+      cause: $typeValidators,
+    });
 
   const typeValidators = $typeValidators.value;
 
@@ -98,7 +98,7 @@ export function parse(options: {
       }
 
       if (onConflict === "abort") {
-        errors.add(Result.err("NODE_CONFLICT").$info({ path, node }));
+        errors.add(Result.error(["NODE_CONFLICT", { path, node }]));
       } else if (onConflict === "merge") {
         Object.assign(existingNode, node);
         node = existingNode;
@@ -186,9 +186,7 @@ export function parse(options: {
     const validator = typeValidators.get(type);
     if (!validator) {
       paths.forEach((path) =>
-        errors.add(
-          Result.err("TYPED_INVALID_TYPE").$info({ path, typed, type })
-        )
+        errors.add(Result.error(["TYPED_INVALID_TYPE", { path, typed, type }]))
       );
       return false;
     }
@@ -197,7 +195,7 @@ export function parse(options: {
     if (issues.length) {
       paths.forEach((path) =>
         errors.add(
-          Result.err("TYPED_INVALID_PROPS").$info({ path, typed, issues })
+          Result.error(["TYPED_INVALID_PROPS", { path, typed, issues }])
         )
       );
       return false;
@@ -212,7 +210,7 @@ export function parse(options: {
   function parsePending(pending: Pending, paths: string[][]): void {
     paths.forEach((path) =>
       errors.add(
-        Result.err("NODE_INVALID_REFERENCE").$info({ path, id: pending.$id })
+        Result.error(["NODE_INVALID_REFERENCE", { path, id: pending.$id }])
       )
     );
   }
@@ -239,28 +237,29 @@ export function parse(options: {
   });
 
   if (errors.size) {
-    return Result.err("DATA_INVALID").$info({
-      errors: Array.from(errors.values()),
-    });
+    return Result.error([
+      "DATA_INVALID",
+      {
+        errors: Array.from(errors.values()),
+      },
+    ]);
   }
 
-  return Result.ok(graph);
+  return Result(graph);
 }
 
 /////////////////////////////
 
-type DataError =
-  | Result.Err<"OBJ_INVALID", { path: string[]; obj: Obj }>
-  | Result.Err<"NODE_CONFLICT", { path: string[]; node: Node }>
-  | Result.Err<"NODE_INVALID_REFERENCE", { path: string[]; id: string }>
-  | Result.Err<
-      "TYPED_INVALID_TYPE",
-      { path: string[]; typed: Typed; type: string }
-    >
-  | Result.Err<
+type DataError = Result.Error<
+  | ["OBJ_INVALID", { path: string[]; obj: Obj }]
+  | ["NODE_CONFLICT", { path: string[]; node: Node }]
+  | ["NODE_INVALID_REFERENCE", { path: string[]; id: string }]
+  | ["TYPED_INVALID_TYPE", { path: string[]; typed: Typed; type: string }]
+  | [
       "TYPED_INVALID_PROPS",
       { path: string[]; typed: Typed; issues: TypedError[] }
-    >;
+    ]
+>;
 
 /////////////////////////////
 
@@ -295,10 +294,11 @@ interface TypeValidator {
   (typed: Typed): TypedError[];
 }
 
-export type TypesError =
-  | Result.Err<"RESOLVE">
-  | Result.Err<"INVALID_TYPED", { id: string; type: unknown }>
-  | Result.Err<"INVALID_PROPS", { id: string; type: Typed }>;
+export type TypesError = Result.Error<
+  | "RESOLVE"
+  | ["INVALID_TYPED", { id: string; type: unknown }]
+  | ["INVALID_PROPS", { id: string; type: Typed }]
+>;
 
 const defaultTypeValidators = new Map<string, TypeValidator>(
   Object.entries(typeDefinitions).map(([name, typeType]) => [
@@ -311,7 +311,7 @@ export function resolveTypeValidators(
   types: unknown
 ): Result<
   Map<string, TypeValidator>,
-  Result.Err<"TYPES_INVALID", { errors: TypesError[] }>
+  ["TYPES_INVALID", { errors: TypesError[] }]
 > {
   const typeValidators = new Map<string, TypeValidator>(defaultTypeValidators);
 
@@ -327,19 +327,19 @@ export function resolveTypeValidators(
         } else if (isNode(type) && isTyped(type)) {
           typesNodes.set(id, type);
         } else {
-          typesErrors.add(Result.err("INVALID_TYPED").$info({ id, type }));
+          typesErrors.add(Result.error(["INVALID_TYPED", { id, type }]));
         }
       }
     } else {
       const $typesGraph = parse({ data: types });
-      if (!$typesGraph.ok) {
-        typesErrors.add(Result.err("RESOLVE"));
+      if ($typesGraph.error) {
+        typesErrors.add(Result.error("RESOLVE"));
       } else {
         $typesGraph.value.nodes.forEach((type, id) => {
           if (isTyped(type)) {
             typesNodes.set(id, type);
           } else {
-            typesErrors.add(Result.err("INVALID_TYPED").$info({ id, type }));
+            typesErrors.add(Result.error(["INVALID_TYPED", { id, type }]));
           }
         });
       }
@@ -347,9 +347,9 @@ export function resolveTypeValidators(
 
     for (const [id, type] of typesNodes) {
       const $schema = toTypeSchema(type);
-      if (!$schema.ok) {
+      if ($schema.error) {
         typesErrors.add(
-          Result.err("INVALID_PROPS").$cause($schema).$info({ id, type })
+          Result.error(["INVALID_PROPS", { id, type }], { cause: $schema })
         );
         continue;
       }
@@ -360,12 +360,13 @@ export function resolveTypeValidators(
     }
 
     if (typesErrors.size)
-      return Result.err("TYPES_INVALID").$info({
-        errors: Array.from(typesErrors),
-      });
+      return Result.error([
+        "TYPES_INVALID",
+        { errors: Array.from(typesErrors) },
+      ]);
   }
 
-  return Result.ok(typeValidators);
+  return Result(typeValidators);
 }
 
 function createTypeValidator(schema: ZodTypeAny): TypeValidator {

@@ -2433,10 +2433,10 @@ esrecurse@^4.3.0:
   dependencies:
     estraverse "^5.2.0"
 
-esresult@^2.0.0:
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/esresult/-/esresult-2.1.0.tgz#c192036a47371c95b84411d4df579da01b77d11f"
-  integrity sha512-b76FsWCGODwdeyvoXm77tB35RCLhBmtLCff/YHnAaxISbvoErrz7JM46yYniYdy7+o69wzaIbIoeM0dhrlu1NQ==
+esresult@^3.1.2:
+  version "3.1.2"
+  resolved "https://registry.yarnpkg.com/esresult/-/esresult-3.1.2.tgz#1b2e609045d6f585a495d9051f434bc0ac605898"
+  integrity sha512-sZHGpidfF1SyTCMYM0gddwNR2GigR+jw4+OVn2XkXUSEKWiANacrs5r51D6Mqv786TwqGoJsVTSCMCsRaLtIoQ==
 
 estraverse@^4.1.1:
   version "4.3.0"

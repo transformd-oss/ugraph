@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-namespace */
 
-import { Result } from "esresult";
+import Result from "esresult";
 import { z, type ZodError, type ZodTypeAny } from "zod";
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -31,30 +31,29 @@ export function _(
     return acc;
   }, {}) as _.Types;
 
-  return Result.ok(function parse(options) {
+  return Result(function parse(options) {
     const { schema } = options;
 
     const { $type } = schema;
     const type = types[$type];
     if (!type) {
-      return Result.err("TypeUnsupported").$info({
-        type: $type,
-      });
+      return Result.error(["TypeUnsupported", { type: $type }]);
     }
 
     let zschema: ZodTypeAny | undefined;
     for (const item of type) {
       const $props = item.props?.safeParse(schema);
       if ($props && !$props.success) {
-        return Result.err("TypePropsInvalid").$info({
-          issues: $props.error.issues,
-        });
+        return Result.error([
+          "TypePropsInvalid",
+          { issues: $props.error.issues },
+        ]);
       }
 
       const props = $props?.data as unknown;
       const $zschema = item.build(props, { parse });
-      if (!$zschema.ok) {
-        return Result.err("TypeSchemaFailed").$cause($zschema);
+      if ($zschema.error) {
+        return Result.error("TypeSchemaFailed", { cause: $zschema });
       }
 
       const nextzschema = $zschema.value;
@@ -69,7 +68,7 @@ export function _(
       zschema = nextzschema;
     }
 
-    return Result.ok(zschema ?? z.never());
+    return Result(zschema ?? z.never());
   });
 }
 
@@ -84,7 +83,7 @@ export namespace _ {
     export type Build<PROPS = ZodTypeAny | undefined> = (
       props: PROPS extends ZodTypeAny ? z.infer<PROPS> : undefined,
       context: { parse: Parse }
-    ) => Result<ZodTypeAny | undefined>;
+    ) => Result<ZodTypeAny | undefined, unknown>;
   }
 
   export type Schema = { $type: string } & Record<string, unknown>;
@@ -95,9 +94,9 @@ export namespace _ {
     schema: SCHEMA;
   }) => Result<
     ZodTypeAny,
-    | Result.Err<"TypeUnsupported", { type: string }>
-    | Result.Err<"TypePropsInvalid", { issues: ZodError["issues"] }>
-    | Result.Err<"TypeSchemaFailed">
+    | ["TypeUnsupported", { type: string }]
+    | ["TypePropsInvalid", { issues: ZodError["issues"] }]
+    | ["TypeSchemaFailed"]
   >;
 }
 
@@ -123,12 +122,14 @@ _.Schema = Schema;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function parseArray(parse: _.Parse, of: _.Schema): Result<ZodTypeAny> {
+function parseArray(parse: _.Parse, of: _.Schema): Result<ZodTypeAny, "OF"> {
   const $ofschema = parse({ schema: of });
-  if (!$ofschema.ok) return Result.err("OF").$cause($ofschema);
+  if ($ofschema.error) {
+    return Result.error("OF", { cause: $ofschema });
+  }
   const ofschema = $ofschema.value;
   const schema = z.array(ofschema);
-  return Result.ok(schema);
+  return Result(schema);
 }
 
 function parseObject(
@@ -136,20 +137,19 @@ function parseObject(
   of: Record<string, _.Schema>
 ): Result<
   ZodTypeAny,
-  | Result.Err<"OfKeyLookupFailed", { key: string }>
-  | Result.Err<"OfKeySchemaFailed", { key: string }>
+  ["OfKeyLookupFailed" | "OfKeySchemaFailed", { key: string }]
 > {
   let schema = z.object({});
   for (const key in of) {
     const keyschema = of[key];
     if (!keyschema) {
-      return Result.err("OfKeyLookupFailed").$info({ key });
+      return Result.error(["OfKeyLookupFailed", { key }]);
     }
     const $valueSchema = parse({ schema: keyschema });
-    if (!$valueSchema.ok) {
-      return Result.err("OfKeySchemaFailed")
-        .$cause($valueSchema)
-        .$info({ key });
+    if ($valueSchema.error) {
+      return Result.error(["OfKeySchemaFailed", { key }], {
+        cause: $valueSchema,
+      });
     }
 
     let valueSchema = $valueSchema.value;
@@ -160,15 +160,15 @@ function parseObject(
 
     schema = schema.extend({ [key]: valueSchema });
   }
-  return Result.ok(schema);
+  return Result(schema);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 const defaultTypes: _.Types = {
-  string: [Type(undefined, () => Result.ok(z.string()))],
-  number: [Type(undefined, () => Result.ok(z.number()))],
-  boolean: [Type(undefined, () => Result.ok(z.boolean()))],
+  string: [Type(undefined, () => Result(z.string()))],
+  number: [Type(undefined, () => Result(z.number()))],
+  boolean: [Type(undefined, () => Result(z.boolean()))],
   array: [
     Type(
       z.object({
@@ -197,11 +197,11 @@ const defaultTypes: _.Types = {
   //       const schema = Typed.extend({ $type: z.literal(type) });
   //       if (with) {
   //         const $withSchema = fromObjectOf(_with);
-  //         if (!$withSchema.ok) return Result.err("WITH").$cause($withSchema);
+  //         if ($withSchema.error) return Result.error("WITH").$cause($withSchema);
   //         const withSchema = $withSchema.value;
-  //         return Result.ok(schema.merge(withSchema));
+  //         return Result(schema.merge(withSchema));
   //       }
-  //       return Result.ok(schema);
+  //       return Result(schema);
   //     }
   //   ),
   // ],

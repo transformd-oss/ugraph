@@ -6,7 +6,7 @@
   "repository": "github:transformd-org/ugraph",
   "author": "Transformd Pty Ltd (https://transformd.com/)",
   "contributors": [
-    "Peter Boyer (https://github.com/ptboyer)"
+    "Peter Boyer <https://github.com/peterboyer>"
   ],
   "license": "Apache-2.0",
   "main": "src/index.ts",
@@ -23,7 +23,7 @@
     "changelog": "./scripts/changelog.sh"
   },
   "dependencies": {
-    "esresult": "^2.0.0",
+    "esresult": "^3.1.2",
     "zod": "^3.14.4"
   },
   "devDependencies": {

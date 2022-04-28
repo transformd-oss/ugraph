@@ -1,8 +1,8 @@
-import { parse } from "./parse";
+import { Graph } from "./graph";
 
 it("should parse basic objects", () => {
   const data = [{ a: 1 }, { b: 2 }, { c: 3 }];
-  const u = parse({ data }).orThrow();
+  const u = Graph({ data }).orThrow();
   expect(u.data).toHaveLength(3);
   expect(u.data).toMatchObject([{ a: 1 }, { b: 2 }, { c: 3 }]);
   expect(u.nodes.size).toBe(0);
@@ -10,7 +10,7 @@ it("should parse basic objects", () => {
 
 it("should parse basic nodes amongst objects", () => {
   const data = [{ $id: "A" }, { x: 1 }];
-  const u = parse({ data }).orThrow();
+  const u = Graph({ data }).orThrow();
   expect(u.data).toHaveLength(2);
   expect(u.data).toMatchObject([{ $id: "A" }, { x: 1 }]);
   expect(u.nodes.size).toBe(1);
@@ -19,7 +19,7 @@ it("should parse basic nodes amongst objects", () => {
 
 it("should fail on node conflict", () => {
   const data = [{ $id: "A" }, { $id: "A" }];
-  const $ = parse({ data });
+  const $ = Graph({ data });
   expect($).toMatchObject({
     error: {
       type: "DataInvalid",
@@ -46,7 +46,7 @@ it("should merge on node conflict", () => {
     { $id: "A", prop: "foo" },
     { $id: "A", prop: "bar" },
   ];
-  const u = parse({ data, onConflict: "merge" }).orThrow();
+  const u = Graph({ data, onConflict: "merge" }).orThrow();
   expect(u.nodes.size).toBe(1);
   expect(u.nodes.get("A")).toMatchObject({
     $id: "A",
@@ -59,7 +59,7 @@ it("should ignore on node conflict", () => {
     { $id: "A", prop: "foo" },
     { $id: "A", prop: "bar" },
   ];
-  const u = parse({ data, onConflict: "ignore" }).orThrow();
+  const u = Graph({ data, onConflict: "ignore" }).orThrow();
   expect(u.nodes.size).toBe(1);
   expect(u.nodes.get("A")).toMatchObject({
     $id: "A",
@@ -81,7 +81,7 @@ it("should parse nested nodes", () => {
       },
     },
   ];
-  const u = parse({ data }).orThrow();
+  const u = Graph({ data }).orThrow();
   expect(u.data).toHaveLength(1);
   expect(u.data).toMatchObject([
     {
@@ -118,7 +118,7 @@ it("should map props references of a simple object", () => {
       $id: "A",
     },
   ];
-  const u = parse({ data }).orThrow();
+  const u = Graph({ data }).orThrow();
   expect(u.nodes.size).toBe(1);
   const a = u.nodes.get("A");
   expect(a).toBeDefined();
@@ -143,7 +143,7 @@ it("should map prop references across nodes", () => {
       prop: { $node: "D" },
     },
   ];
-  const u = parse({ data }).orThrow();
+  const u = Graph({ data }).orThrow();
   expect(u.data).toHaveLength(4);
   expect(u.nodes.size).toBe(4);
   const a = u.nodes.get("A");
@@ -169,7 +169,7 @@ it("should fail with bad references", () => {
       c: { $node: "C" },
     },
   ];
-  const $ = parse({ data });
+  const $ = Graph({ data });
   expect($).toMatchObject({
     error: {
       type: "DataInvalid",

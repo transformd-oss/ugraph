@@ -5,6 +5,5 @@
     "declaration": true,
     "noEmitOnError": true
   },
-  "include": ["src"],
   "exclude": ["dist", "src/**/*.test.ts"]
 }

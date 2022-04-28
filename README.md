@@ -167,13 +167,10 @@ const graph = $graph.value
   supporting "computed" properties that can be resolved when targetted by
   `$path`.
 
-> Relies on [`Typed`](#typed) Objects.
-
 ```jsonc
 [
   {
     "$id": "aaa",
-    "$type": "Webhook",
     "endpoint": "hello",
   },
   {
@@ -181,108 +178,6 @@ const graph = $graph.value
     // "url" computed property on runtime interface
     // -> e.g. Webhook.url() => "https://mysite.com/webhooks/hello"
     "url": { "$node": "aaa", "$path": "$.url" }
-  }
-]
-```
-
-### `Typed`
-
-- Different Objects often represent different types of domain-specific entities.
-- These types can be assigned with the `"$type"` property.
-- Any Object that has a `"$type"` property is considered Typed.
-
-```jsonc
-{ "$type": "User", ... }
-{ "$type": "Blog", ... }
-{ "$type": "Post", ... }
-```
-
-#### Data Types
-
-- If you want validate all Typeds you can express data structures with type
-  built-ins which may also be composed as Nodes.
-
-```jsonc
-// string
-{ "$type": "string" }
-
-// number
-{ "$type": "number" }
-
-// boolean
-{ "$type": "boolean" }
-
-// (string)[]
-{
-  "$type": "array",
-  "of": { "$type": "string" }
-}
-
-// { foo: string }
-{
-  "$type": "object",
-  "of": { "foo": { "$type": "string" } }
-}
-
-// { foo?: string | undefined }
-{
-  "$type": "object",
-  "of": { "foo": { "$type": "string", required: false } }
-}
-
-// string | number
-{
-  "$type": "union",
-  "of": [{ "$type": "string" }, { "$type": "number" }]
-}
-```
-
-#### Composing Data Types
-
-- Because data types also exist in the graph, they can:
-  - be Nodes,
-  - be Referenced by other Nodes,
-  - reference other Nodes (to represent complex data structures),
-  - function as aliases to decorate otherwise plain primitive types.
-
-##### Composing Complex Objects
-
-```jsonc
-[
-  {
-    "$id": "object:Address",
-    "$type": "object",
-    "of": { /* ... */ }
-  },
-  {
-    "$type": "object",
-    "of": {
-      // reuse object shape
-      "address": { "$node": "object:Address" }
-    }
-  }
-]
-```
-
-##### Aliasing Primitives
-
-```jsonc
-[
-  {
-    "$id": "string:Tag",
-    "$type": "string"
-  },
-  {
-    "$type": "object",
-    "of": {
-      "name": { "$type": "string" },
-
-      "items": {
-        "$type": "array",
-        // add meaning
-        of: { "$node": "string:Tag" }
-      }
-    }
   }
 ]
 ```

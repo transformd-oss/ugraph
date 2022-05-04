@@ -1,10 +1,4 @@
-import Result from "esresult";
 import { z } from "zod";
-
-export interface Graph {
-  data: unknown;
-  nodes: Map<string, Node>;
-}
 
 export type Obj = Record<string, unknown>;
 export const Obj = z.object({}).passthrough();
@@ -18,8 +12,24 @@ export function isNode(source: unknown): source is Node {
   return Node.safeParse(source).success;
 }
 
-type Path = string[];
+type Reference = z.infer<typeof Reference>;
+const Reference = Obj.extend({
+  $node: z.union([z.string(), Obj]),
+});
+export function isReference(source: unknown): source is Reference {
+  return Reference.safeParse(source).success;
+}
 
+type Pending = z.infer<typeof Pending>;
+const Pending = Obj.extend({
+  $id: z.string(),
+  $pending: z.literal(true),
+});
+function isPending(source: unknown): source is Pending {
+  return Pending.safeParse(source).success;
+}
+
+type Path = string[];
 type DataError = Result.Error<
   | ["NodeIdConflict", { path: Path; id: string; conflictPath: Path }]
   | ["NodeReferenceBroken", { path: Path; id: string }]
@@ -35,23 +45,25 @@ type DataError = Result.Error<
  * which will be automatically parsed for it's Nodes. Type-definition Nodes use
  * it's `$id` property to determine which `$type` name to validate on a Object.
  */
-export function Graph(options: {
-  /**
-   * Data to walk and extract nodes from.
-   */
-  data: unknown;
-  /**
-   * Default: "abort"
-   * - "abort", return error on conflicting node definition.
-   * - "merge", merge props of all conflicting node definitions (slower).
-   * - "ignore", skips conflicts (only first instance is used).
-   */
-  onConflict?: "abort" | "merge" | "ignore";
-  /**
-   * Optional callback fired once per-every complete Node object, with $id.
-   */
-  onNode?: (id: string, node: Node) => void;
-}): Result<Graph, ["DataInvalid", { errors: DataError[] }]> {
+export function parse(
+  data: unknown,
+  options: {
+    /**
+     * Default: "abort"
+     * - "abort", return error on conflicting node definition.
+     * - "merge", merge props of all conflicting node definitions (slower).
+     * - "ignore", skips conflicts (only first instance is used).
+     */
+    onConflict?: "abort" | "merge" | "ignore";
+    /**
+     * Optional callback fired once per-every complete Node object, with $id.
+     */
+    onNode?: (id: string, node: Node) => void;
+  } = {}
+): Result<
+  { data: unknown; nodes: Map<string, Node> },
+  ["DataInvalid", { errors: DataError[] }]
+> {
   type NodeId = string;
   const nodes = new Map<NodeId, Node>();
   const nodePathsMap = new Map<Node, Path[]>();
@@ -199,9 +211,7 @@ export function Graph(options: {
     );
   }
 
-  /////////////////////////////
-  const { data } = options;
-  const graph: Graph = { data: walk(data), nodes };
+  const dataOutput = walk(data);
 
   const { onNode } = options;
   if (onNode) {
@@ -219,35 +229,10 @@ export function Graph(options: {
     ]);
   }
 
-  return Result(graph);
+  return Result({ data: dataOutput, nodes });
 }
 
 /////////////////////////////
-
-/////////////////////////////
-
-type Reference = z.infer<typeof Reference>;
-
-const Reference = Obj.extend({
-  $node: z.union([z.string(), Obj]),
-});
-
-export function isReference(source: unknown): source is Reference {
-  return Reference.safeParse(source).success;
-}
-
-/////////////////////////////
-
-type Pending = z.infer<typeof Pending>;
-
-const Pending = Obj.extend({
-  $id: z.string(),
-  $pending: z.literal(true),
-});
-
-function isPending(source: unknown): source is Pending {
-  return Pending.safeParse(source).success;
-}
 
 function addPath<T extends Map<unknown, { paths: Path[] }>>(
   map: T,

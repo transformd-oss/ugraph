@@ -1,3 +1,4 @@
+import Result from "esresult";
 import { z } from "zod";
 
 export type Obj = Record<string, unknown>;

@@ -1,4 +1,3 @@
-import "esresult/global";
 import { parse } from "./parse";
 
 it("should parse basic objects", () => {

@@ -19,8 +19,7 @@
     "lint": "./scripts/lint.sh",
     "build": "./scripts/build.sh",
     "build:version": "./scripts/build-version.sh",
-    "docs": "./scripts/docs.sh",
-    "changelog": "./scripts/changelog.sh"
+    "docs": "./scripts/docs.sh"
   },
   "dependencies": {
     "esresult": "^3.2.0"

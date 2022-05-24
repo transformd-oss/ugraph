@@ -1,40 +1,39 @@
 import Result from "esresult";
-import { z } from "zod";
+
+//
 
 export type Obj = Record<string, unknown>;
-export const Obj = z.object({}).passthrough();
 export function isObj(source: unknown): source is Obj {
-  return Obj.safeParse(source).success;
+  return !!(source && typeof source === "object" && !Array.isArray(source));
 }
 
-export type Node<PROPS extends Obj = Obj> = { $id: string } & PROPS;
-export const Node = Obj.extend({ $id: z.string() });
+export type Node = { $id: string } & Obj;
 export function isNode(source: unknown): source is Node {
-  return Node.safeParse(source).success;
+  return !!(isObj(source) && typeof source["$id"] === "string");
 }
 
-type Reference = z.infer<typeof Reference>;
-const Reference = Obj.extend({
-  $node: z.union([z.string(), Obj]),
-});
+type Reference = { $node: string | Obj };
 export function isReference(source: unknown): source is Reference {
-  return Reference.safeParse(source).success;
+  return !!(
+    isObj(source) &&
+    (typeof source["$node"] === "string" || isNode(source["$node"]))
+  );
 }
 
-type Pending = z.infer<typeof Pending>;
-const Pending = Obj.extend({
-  $id: z.string(),
-  $pending: z.literal(true),
-});
+type Pending = { $id: string; $pending: true };
 function isPending(source: unknown): source is Pending {
-  return Pending.safeParse(source).success;
+  return !!(isObj(source) && isNode(source) && source["$pending"] === true);
 }
+
+//
 
 type Path = string[];
 type DataError = Result.Error<
   | ["NodeIdConflict", { path: Path; id: string; conflictPath: Path }]
   | ["NodeReferenceBroken", { path: Path; id: string }]
 >;
+
+//
 
 /**
  * Given `data`, will return a runtime Graph with all Nodes recursively
@@ -233,7 +232,7 @@ export function parse(
   return Result({ data: dataOutput, nodes });
 }
 
-/////////////////////////////
+//
 
 function addPath<T extends Map<unknown, { paths: Path[] }>>(
   map: T,

@@ -23,8 +23,7 @@
     "changelog": "./scripts/changelog.sh"
   },
   "dependencies": {
-    "esresult": "^3.2.0",
-    "zod": "^3.14.4"
+    "esresult": "^3.2.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^16.0.0",
